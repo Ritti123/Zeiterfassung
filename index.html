@@ -1,456 +1,309 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Zeiterfassung</title>
   <style>
-    body { 
-      font-family: Arial, sans-serif; 
-      padding: 20px; 
-      max-width: 800px; 
-      margin: 0 auto; 
-      line-height: 1.6;
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 1000px;
+      margin: 0 auto;
+      padding: 20px;
     }
-    
-    h2, h3 { color: #2c3e50; }
-    
-    input, select, button { 
-      padding: 10px; 
-      margin: 5px 0; 
-      width: 100%; 
+    .section {
+      border: 1px solid #ddd;
+      padding: 20px;
+      margin-bottom: 20px;
+      border-radius: 5px;
+    }
+    input, select, button {
+      padding: 10px;
+      margin: 8px 0;
+      width: 100%;
       box-sizing: border-box;
+      border: 1px solid #ccc;
+      border-radius: 4px;
     }
-    
-    button { 
-      background: #3498db; 
-      color: white; 
-      border: none; 
-      cursor: pointer; 
+    button {
+      background-color: #3498db;
+      color: white;
+      border: none;
+      cursor: pointer;
+      font-weight: bold;
     }
-    
-    button.danger { background: #e74c3c; }
-    button.secondary { background: #2ecc71; }
-    
-    table { 
-      width: 100%; 
-      border-collapse: collapse; 
-      margin: 20px 0; 
+    button.delete {
+      background-color: #e74c3c;
     }
-    
-    th, td { 
-      border: 1px solid #ddd; 
-      padding: 8px; 
-      text-align: center; 
+    button.secondary {
+      background-color: #2ecc71;
     }
-    
-    thead { background: #f2f2f2; }
-    
-    #month-nav { 
-      display: flex; 
-      justify-content: space-between; 
-      margin: 15px 0; 
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
     }
-    
-    #user-section, #app { 
-      border: 1px solid #ddd; 
-      padding: 15px; 
-      margin-bottom: 20px; 
+    th, td {
+      border: 1px solid #ccc;
+      padding: 8px;
+      text-align: center;
     }
-    
-    .form-group { margin-bottom: 15px; }
-    .form-group label { display: block; font-weight: bold; }
-    
-    .hidden { display: none; }
+    th {
+      background-color: #f9f9f9;
+    }
+    .stats {
+      display: flex;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 20px;
+    }
+    .stat-box {
+      flex: 1;
+      min-width: 200px;
+      border: 1px solid #ccc;
+      padding: 10px;
+      border-radius: 5px;
+    }
+    .month-selector {
+      margin-bottom: 15px;
+    }
   </style>
 </head>
 <body>
+  <div class="section">
+    <h2>Zeiterfassung</h2>
 
-<div id="user-section">
-  <h2>Benutzerverwaltung</h2>
-  <div id="user-login">
-    <div class="form-group">
-      <label for="user-select">Benutzer auswählen:</label>
-      <select id="user-select">
-        <option value="">-- Bitte auswählen --</option>
-      </select>
+    <div>
+      <label for="date">Datum:</label>
+      <input type="date" id="date">
     </div>
-    <div class="form-group">
-      <label for="user-pin">PIN eingeben:</label>
-      <input type="password" id="user-pin" placeholder="4-stelliger PIN" maxlength="4">
+    <div>
+      <label for="start-time">Startzeit:</label>
+      <input type="time" id="start-time">
     </div>
-    <button id="login-btn">Anmelden</button>
-  </div>
-  
-  <h3>Benutzer erstellen/löschen</h3>
-  <div id="user-manage">
-    <div class="form-group">
-      <label for="new-user-name">Neuer Benutzername:</label>
-      <input type="text" id="new-user-name" placeholder="Name eingeben">
+    <div>
+      <label for="end-time">Endzeit:</label>
+      <input type="time" id="end-time">
     </div>
-    <div class="form-group">
-      <label for="new-user-pin">Neue PIN (4-stellig):</label>
-      <input type="password" id="new-user-pin" placeholder="PIN eingeben" maxlength="4">
+    <div>
+      <label for="break">Pause (Minuten):</label>
+      <input type="number" id="break" value="30">
     </div>
-    <button id="create-user-btn">Benutzer anlegen</button>
-    <button id="delete-user-btn" class="danger">Benutzer löschen</button>
-  </div>
-</div>
-
-<div id="app" class="hidden">
-  <div id="month-nav">
-    <button id="prev-month">‹</button>
-    <div id="current-month"></div>
-    <button id="next-month">›</button>
-  </div>
-
-  <form id="time-form">
-    <div class="form-group">
-      <label for="datum">Datum:</label>
-      <input type="date" id="datum" required>
-    </div>
-    <div class="form-group">
-      <label for="startzeit">Startzeit:</label>
-      <input type="time" id="startzeit" required>
-    </div>
-    <div class="form-group">
-      <label for="endzeit">Endzeit:</label>
-      <input type="time" id="endzeit" required>
-    </div>
-    <div class="form-group">
-      <label for="pause">Pause (Minuten):</label>
-      <input type="number" id="pause" value="60" required>
-    </div>
-    <div class="form-group">
-      <label for="typ">Art:</label>
-      <select id="typ">
+    <div>
+      <label for="type">Art:</label>
+      <select id="type">
         <option value="Arbeit">Arbeit</option>
         <option value="Urlaub">Urlaub</option>
         <option value="Krank">Krank</option>
         <option value="Feiertag">Feiertag</option>
       </select>
     </div>
-    <button type="submit">Eintragen</button>
-  </form>
+    <button id="add-entry-btn">Eintrag hinzufügen</button>
 
-  <table id="tabelle">
-    <thead>
-      <tr>
-        <th>Datum</th>
-        <th>Kommen</th>
-        <th>Gehen</th>
-        <th>Pause</th>
-        <th>Typ</th>
-        <th>Ist</th>
-        <th>Soll</th>
-        <th>+/-</th>
-        <th>Aktion</th>
-      </tr>
-    </thead>
-    <tbody></tbody>
-    <tfoot>
-      <tr>
-        <td colspan="8" id="summen"></td>
-      </tr>
-    </tfoot>
-  </table>
-  
-  <div class="backup-section">
-    <h3>Daten-Sicherung</h3>
-    <button id="export-csv" class="secondary">Excel Export</button>
-    <button id="backup-data" class="secondary">Komplette Sicherung</button>
-    <button id="restore-data">Sicherung wiederherstellen</button>
-    <input type="file" id="restore-file" class="hidden" accept=".json">
+    <div class="month-selector">
+      <label for="month">Monat anzeigen:</label>
+      <input type="month" id="month">
+    </div>
+
+    <h3>Zeiteinträge</h3>
+    <table id="time-entries">
+      <thead>
+        <tr>
+          <th>Datum</th>
+          <th>Start</th>
+          <th>Ende</th>
+          <th>Pause</th>
+          <th>Art</th>
+          <th>Stunden</th>
+          <th>Aktion</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+
+    <div class="stats">
+      <div class="stat-box">
+        <h4>Überstunden</h4>
+        <p id="overtime">0 Stunden</p>
+      </div>
+      <div class="stat-box">
+        <h4>Urlaubstage</h4>
+        <p id="vacation-days">0 Tage</p>
+      </div>
+      <div class="stat-box">
+        <h4>Krankheitstage</h4>
+        <p id="sick-days">0 Tage</p>
+      </div>
+      <div class="stat-box">
+        <h4>Feiertage</h4>
+        <p id="holiday-days">0 Tage</p>
+      </div>
+    </div>
+
+    <button id="export-csv-btn" class="secondary">Als CSV exportieren</button>
+    <button id="export-backup-btn" class="secondary">Daten sichern</button>
+    <button id="import-backup-btn">Daten wiederherstellen</button>
+    <input type="file" id="import-file" style="display:none">
   </div>
-  
-  <button onclick="logout()" style="margin-top: 20px;">Abmelden</button>
-</div>
 
-<script>
-// Datenstruktur
-let eintraege = JSON.parse(localStorage.getItem('eintraege') || [];
-let users = JSON.parse(localStorage.getItem('users')) || [];
-let currentUser = null;
-let viewDate = new Date();
+  <script>
+    const WORK_HOURS_PER_DAY = 8;
+    const VACATION_DAYS_PER_YEAR = 24;
 
-// Konstanten
-const sollStunden = 8;
-const urlaubstage = 24;
+    let timeEntries = JSON.parse(localStorage.getItem('timeEntries') || '[]');
 
-// DOM Elemente
-const userSelect = document.getElementById('user-select');
-const userPin = document.getElementById('user-pin');
-const newUserName = document.getElementById('new-user-name');
-const newUserPin = document.getElementById('new-user-pin');
-const appSection = document.getElementById('app');
-const userSection = document.getElementById('user-section');
-const timeForm = document.getElementById('time-form');
-const tabelleBody = document.querySelector('#tabelle tbody');
+    const addEntryBtn = document.getElementById('add-entry-btn');
+    const exportCsvBtn = document.getElementById('export-csv-btn');
+    const exportBackupBtn = document.getElementById('export-backup-btn');
+    const importBackupBtn = document.getElementById('import-backup-btn');
+    const importFile = document.getElementById('import-file');
+    const tbody = document.querySelector('#time-entries tbody');
+    const monthInput = document.getElementById('month');
 
-// Initialisierung
-document.addEventListener('DOMContentLoaded', function() {
-  // Event Listener
-  document.getElementById('login-btn').addEventListener('click', login);
-  document.getElementById('create-user-btn').addEventListener('click', createUser);
-  document.getElementById('delete-user-btn').addEventListener('click', deleteUser);
-  document.getElementById('prev-month').addEventListener('click', () => changeMonth(-1));
-  document.getElementById('next-month').addEventListener('click', () => changeMonth(1));
-  document.getElementById('export-csv').addEventListener('click', exportCSV);
-  document.getElementById('backup-data').addEventListener('click', backupData);
-  document.getElementById('restore-data').addEventListener('click', () => document.getElementById('restore-file').click());
-  document.getElementById('restore-file').addEventListener('change', (e) => restoreData(e.target.files[0]));
-  timeForm.addEventListener('submit', (e) => {
-    e.preventDefault();
-    addEntry();
-  });
+    addEntryBtn.addEventListener('click', addTimeEntry);
+    exportCsvBtn.addEventListener('click', exportCSV);
+    exportBackupBtn.addEventListener('click', exportBackup);
+    importBackupBtn.addEventListener('click', () => importFile.click());
+    importFile.addEventListener('change', handleImport);
+    monthInput.addEventListener('change', loadEntries);
 
-  // Heutiges Datum setzen
-  document.getElementById('datum').valueAsDate = new Date();
-  
-  // Benutzerliste laden
-  updateUserSelect();
-});
+    document.addEventListener('DOMContentLoaded', () => {
+      document.getElementById('date').valueAsDate = new Date();
+      const now = new Date();
+      monthInput.value = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+      loadEntries();
+    });
 
-function saveData() {
-  localStorage.setItem('eintraege', JSON.stringify(eintraege));
-  localStorage.setItem('users', JSON.stringify(users));
-}
+    function addTimeEntry() {
+      const date = document.getElementById('date').value;
+      const start = document.getElementById('start-time').value;
+      const end = document.getElementById('end-time').value;
+      const pause = parseInt(document.getElementById('break').value) || 0;
+      const type = document.getElementById('type').value;
 
-function updateUserSelect() {
-  userSelect.innerHTML = '<option value="">-- Bitte auswählen --</option>';
-  users.forEach(user => {
-    userSelect.innerHTML += `<option value="${user.name}">${user.name}</option>`;
-  });
-}
-
-function login() {
-  const name = userSelect.value;
-  const pin = userPin.value.trim();
-  
-  if (!name) return alert("Bitte Benutzer auswählen");
-  if (pin.length !== 4 || !/^\d+$/.test(pin)) return alert("Ungültiger PIN");
-  
-  const user = users.find(u => u.name === name && u.pin === pin);
-  if (!user) return alert("Falsche Anmeldedaten");
-  
-  currentUser = name;
-  userSection.classList.add('hidden');
-  appSection.classList.remove('hidden');
-  userPin.value = '';
-  renderTabelle();
-}
-
-function logout() {
-  currentUser = null;
-  appSection.classList.add('hidden');
-  userSection.classList.remove('hidden');
-}
-
-function createUser() {
-  const name = newUserName.value.trim();
-  const pin = newUserPin.value.trim();
-  
-  if (!name) return alert("Bitte Namen eingeben");
-  if (pin.length !== 4 || !/^\d+$/.test(pin)) return alert("Ungültiger PIN (4 Ziffern)");
-  if (users.some(u => u.name.toLowerCase() === name.toLowerCase())) return alert("Benutzer existiert bereits");
-  
-  users.push({ name, pin });
-  saveData();
-  updateUserSelect();
-  
-  newUserName.value = '';
-  newUserPin.value = '';
-  userSelect.value = name;
-  
-  alert(`Benutzer "${name}" angelegt`);
-}
-
-function deleteUser() {
-  const name = userSelect.value;
-  if (!name) return alert("Bitte Benutzer auswählen");
-  
-  if (!confirm(`Benutzer "${name}" und alle Daten löschen?`)) return;
-  
-  users = users.filter(u => u.name !== name);
-  eintraege = eintraege.filter(e => e.user !== name);
-  saveData();
-  updateUserSelect();
-  alert(`Benutzer "${name}" gelöscht`);
-}
-
-function addEntry() {
-  const datum = document.getElementById('datum').value;
-  const start = document.getElementById('startzeit').value;
-  const end = document.getElementById('endzeit').value;
-  const pause = parseInt(document.getElementById('pause').value) || 0;
-  const typ = document.getElementById('typ').value;
-  
-  if (!datum || !start || !end) return alert("Bitte alle Felder ausfüllen");
-  
-  eintraege.push({ user: currentUser, datum, start, end, pause, typ });
-  saveData();
-  
-  // Formular zurücksetzen
-  document.getElementById('datum').value = '';
-  document.getElementById('startzeit').value = '';
-  document.getElementById('endzeit').value = '';
-  
-  // Nächsten Tag vorauswählen
-  const nextDay = new Date(datum);
-  nextDay.setDate(nextDay.getDate() + 1);
-  document.getElementById('datum').valueAsDate = nextDay;
-  
-  renderTabelle();
-}
-
-function renderTabelle() {
-  tabelleBody.innerHTML = "";
-  const monat = viewDate.toISOString().slice(0,7);
-  let summe = 0, urlaub = 0, krank = 0;
-  
-  // Filtere Einträge für aktuellen Benutzer und Monat
-  const userEintraege = eintraege
-    .filter(e => e.user === currentUser && e.datum.startsWith(monat))
-    .sort((a, b) => a.datum.localeCompare(b.datum));
-  
-  userEintraege.forEach((e, i) => {
-    const startMin = timeToMinutes(e.start);
-    const endMin = timeToMinutes(e.end);
-    const ist = Math.max(0, endMin - startMin - e.pause);
-    const istH = (ist/60).toFixed(2);
-    const diff = e.typ === "Arbeit" ? ist/60 - sollStunden : 0;
-    
-    if (e.typ === "Arbeit") summe += diff;
-    if (e.typ === "Urlaub") urlaub++;
-    if (e.typ === "Krank") krank++;
-    
-    const tr = document.createElement("tr");
-    tr.innerHTML = `
-      <td>${formatDate(e.datum)}</td>
-      <td>${e.start}</td>
-      <td>${e.end}</td>
-      <td>${e.pause}</td>
-      <td>${e.typ}</td>
-      <td>${e.typ === "Arbeit" ? istH : ""}</td>
-      <td>${e.typ === "Arbeit" ? sollStunden : ""}</td>
-      <td>${e.typ === "Arbeit" ? diff.toFixed(2) : ""}</td>
-      <td><button class="danger" onclick="deleteEntry(${eintraege.findIndex(entry => 
-        entry.user === e.user && 
-        entry.datum === e.datum && 
-        entry.start === e.start && 
-        entry.end === e.end
-      )})">x</button></td>
-    `;
-    tabelleBody.appendChild(tr);
-  });
-  
-  // Aktualisiere Summenzeile und Monatsanzeige
-  document.getElementById("summen").textContent =
-    `Überstunden: ${summe.toFixed(2)} | Urlaub: ${urlaub}/${urlaubstage} | Krank: ${krank}`;
-  
-  document.getElementById("current-month").textContent = 
-    `${viewDate.toLocaleString('de-DE', { month: 'long', year: 'numeric' })}`;
-}
-
-function deleteEntry(index) {
-  if (confirm("Eintrag wirklich löschen?")) {
-    eintraege.splice(index, 1);
-    saveData();
-    renderTabelle();
-  }
-}
-
-function changeMonth(dir) {
-  viewDate.setMonth(viewDate.getMonth() + dir);
-  renderTabelle();
-}
-
-function formatDate(d) {
-  const [year, month, day] = d.split("-");
-  return `${day}.${month}.${year}`;
-}
-
-function timeToMinutes(time) {
-  const [h, m] = time.split(":").map(Number);
-  return h * 60 + m;
-}
-
-function exportCSV() {
-  const headers = ["Datum","Start","Ende","Pause","Typ","Ist","Soll","Differenz"];
-  const rows = [headers.join(";")];
-  
-  const userEintraege = eintraege.filter(e => e.user === currentUser);
-  
-  userEintraege.forEach(e => {
-    const startMin = timeToMinutes(e.start);
-    const endMin = timeToMinutes(e.end);
-    const ist = Math.max(0, endMin - startMin - e.pause);
-    const istH = (ist/60).toFixed(2);
-    const diff = e.typ === "Arbeit" ? (ist/60 - sollStunden).toFixed(2) : "";
-    
-    rows.push([
-      e.datum, 
-      e.start, 
-      e.end, 
-      e.pause, 
-      e.typ,
-      e.typ === "Arbeit" ? istH : "",
-      e.typ === "Arbeit" ? sollStunden : "",
-      diff
-    ].join(";"));
-  });
-  
-  downloadFile(`zeiterfassung-${currentUser}.csv`, rows.join("\n"), "text/csv");
-}
-
-function backupData() {
-  const data = {
-    users: users,
-    eintraege: eintraege,
-    timestamp: new Date().toISOString()
-  };
-  
-  downloadFile(
-    `zeiterfassung-backup-${new Date().toISOString().slice(0,10)}.json`,
-    JSON.stringify(data, null, 2),
-    "application/json"
-  );
-}
-
-function restoreData(file) {
-  const reader = new FileReader();
-  reader.onload = function(e) {
-    try {
-      const data = JSON.parse(e.target.result);
-      if (!data.users || !data.eintraege) throw new Error("Ungültiges Format");
-      
-      if (confirm(`Sicherung wiederherstellen? (${data.users.length} Benutzer, ${data.eintraege.length} Einträge)`)) {
-        users = data.users;
-        eintraege = data.eintraege;
-        saveData();
-        updateUserSelect();
-        alert("Daten erfolgreich wiederhergestellt!");
+      if (!date || (!start && type === 'Arbeit') || (!end && type === 'Arbeit')) {
+        alert('Bitte alle Pflichtfelder ausfüllen.');
+        return;
       }
-    } catch (error) {
-      alert("Fehler: " + error.message);
-    }
-  };
-  reader.readAsText(file);
-}
 
-function downloadFile(filename, content, type) {
-  const blob = new Blob(["\uFEFF" + content], {type: `${type};charset=utf-8;`});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  setTimeout(() => {
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  }, 100);
-}
-</script>
+      let hours = 0;
+      if (type === 'Arbeit') {
+        const startDate = new Date(`${date}T${start}`);
+        const endDate = new Date(`${date}T${end}`);
+        const diff = (endDate - startDate) / 60000 - pause;
+        if (diff <= 0) {
+          alert('Endzeit muss nach Startzeit liegen.');
+          return;
+        }
+        hours = (diff / 60).toFixed(2);
+      }
+
+      timeEntries.push({ date, start, end, pause, type, hours });
+      localStorage.setItem('timeEntries', JSON.stringify(timeEntries));
+      loadEntries();
+      document.getElementById('start-time').value = '';
+      document.getElementById('end-time').value = '';
+      document.getElementById('date').valueAsDate = new Date(new Date(date).getTime() + 86400000);
+    }
+
+    function loadEntries() {
+      tbody.innerHTML = '';
+      let overtime = 0;
+      let vacation = 0;
+      let sick = 0;
+      let holidays = 0;
+
+      const selectedMonth = monthInput.value;
+      const entries = timeEntries.filter(e => e.date.startsWith(selectedMonth)).sort((a, b) => new Date(a.date) - new Date(b.date));
+
+      entries.forEach((entry, index) => {
+        const row = tbody.insertRow();
+        row.insertCell(0).textContent = formatDate(entry.date);
+        row.insertCell(1).textContent = entry.start || '-';
+        row.insertCell(2).textContent = entry.end || '-';
+        row.insertCell(3).textContent = entry.pause || 0;
+        row.insertCell(4).textContent = entry.type;
+        row.insertCell(5).textContent = entry.hours || '0';
+
+        if (entry.type === 'Arbeit') {
+          overtime += parseFloat(entry.hours) - WORK_HOURS_PER_DAY;
+        } else if (entry.type === 'Urlaub') {
+          vacation++;
+        } else if (entry.type === 'Krank') {
+          sick++;
+        } else if (entry.type === 'Feiertag') {
+          holidays++;
+        }
+
+        const deleteBtn = document.createElement('button');
+        deleteBtn.textContent = 'Löschen';
+        deleteBtn.className = 'delete';
+        deleteBtn.onclick = () => {
+          const indexAll = timeEntries.indexOf(entry);
+          timeEntries.splice(indexAll, 1);
+          localStorage.setItem('timeEntries', JSON.stringify(timeEntries));
+          loadEntries();
+        };
+        row.insertCell(6).appendChild(deleteBtn);
+      });
+
+      document.getElementById('overtime').textContent = `${overtime.toFixed(2)} Stunden`;
+      document.getElementById('vacation-days').textContent = `${vacation} Tage`;
+      document.getElementById('sick-days').textContent = `${sick} Tage`;
+      document.getElementById('holiday-days').textContent = `${holidays} Tage`;
+    }
+
+    function formatDate(dateStr) {
+      const [y, m, d] = dateStr.split('-');
+      return `${d}.${m}.${y}`;
+    }
+
+    function exportCSV() {
+      if (timeEntries.length === 0) return alert('Keine Daten vorhanden.');
+
+      let csv = 'Datum;Start;Ende;Pause;Art;Stunden\n';
+      timeEntries.forEach(e => {
+        csv += `${formatDate(e.date)};${e.start || ''};${e.end || ''};${e.pause};${e.type};${e.hours}\n`;
+      });
+      download('zeiterfassung.csv', csv, 'text/csv');
+    }
+
+    function exportBackup() {
+      const data = { entries: timeEntries, exported: new Date().toISOString() };
+      download('backup_zeiterfassung.json', JSON.stringify(data, null, 2), 'application/json');
+    }
+
+    function download(filename, content, type) {
+      const blob = new Blob(["\uFEFF" + content], { type });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = filename;
+      link.click();
+      URL.revokeObjectURL(link.href);
+    }
+
+    function handleImport(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function (event) {
+        try {
+          const data = JSON.parse(event.target.result);
+          if (!Array.isArray(data.entries)) throw new Error('Ungültiges Format');
+          if (confirm(`${data.entries.length} Einträge importieren? Vorherige Daten werden überschrieben.`)) {
+            timeEntries = data.entries;
+            localStorage.setItem('timeEntries', JSON.stringify(timeEntries));
+            loadEntries();
+            alert('Import erfolgreich.');
+          }
+        } catch (err) {
+          alert('Fehler beim Import: ' + err.message);
+        }
+      };
+      reader.readAsText(file);
+    }
+  </script>
 </body>
 </html>
