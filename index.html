@@ -1,0 +1,261 @@
+
+
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Zeiterfassung</title>
+  <style>
+    body { font-family: sans-serif; padding: 10px; max-width: 600px; margin: auto; }
+    input, select, button { width: 100%; padding: 8px; margin: 5px 0; font-size: 1em; box-sizing: border-box; }
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    th, td { border: 1px solid #ccc; padding: 6px; text-align: center; font-size: 0.9em; }
+    thead { background: #eee; }
+    tfoot { background: #f8f8f8; font-weight: bold; }
+    .small-btn { padding: 4px 8px; font-size: 0.8em; }
+    #month-nav { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; gap: 5px; }
+    #current-month { flex: 1; text-align: left; font-weight: bold; }
+    #user-section { border: 1px solid #ccc; padding: 10px; margin-bottom: 15px; }
+    .reset-pin { display: flex; gap: 5px; margin-top: 5px; align-items: center; }
+    .reset-pin input { flex: 1; }
+  </style>
+</head>
+<body>
+
+<div id="user-section">
+  <h2>Benutzer</h2>
+  <div id="user-login">
+    <select id="user-select"></select>
+    <input type="password" id="user-pin" placeholder="4-stelliger PIN" maxlength="4" />
+    <button onclick="login()">Anmelden</button>
+  </div>
+  <div id="user-manage">
+    <input type="text" id="new-user-name" placeholder="Name" />
+    <input type="password" id="new-user-pin" placeholder="PIN (4-stellig)" maxlength="4" />
+    <button onclick="createUser()">Benutzer anlegen</button>
+    <button onclick="deleteUser()">Benutzer lšschen</button>
+    <div id="reset-area"></div>
+  </div>
+</div>
+
+<div id="app" style="display:none">
+  <div id="month-nav">
+    <button onclick="changeMonth(-1)">Ü</button>
+    <div id="current-month"></div>
+    <button onclick="changeMonth(1)">Ý</button>
+  </div>
+
+  <form onsubmit="addEntry(); return false;">
+    <input type="date" id="datum" required />
+    <input type="time" id="startzeit" required />
+    <input type="time" id="endzeit" required />
+    <input type="number" id="pause" placeholder="Pause in Minuten" required value="60" />
+    <select id="typ">
+      <option value="Arbeit">Arbeit</option>
+      <option value="Urlaub">Urlaub</option>
+      <option value="Krank">Krank</option>
+      <option value="Feiertag">Feiertag</option>
+    </select>
+    <button type="submit">Eintragen</button>
+  </form>
+
+  <table id="tabelle">
+    <thead>
+      <tr>
+        <th>Datum</th>
+        <th>Kommen</th>
+        <th>Gehen</th>
+        <th>Pause</th>
+        <th>Typ</th>
+        <th>Ist</th>
+        <th>Soll</th>
+        <th>+</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+    <tfoot>
+      <tr>
+        <td colspan="8" id="summen"></td>
+      </tr>
+    </tfoot>
+  </table>
+  <button onclick="exportCSV()">Excel Export</button>
+</div>
+
+<script>
+let eintraege = JSON.parse(localStorage.getItem('eintraege') || '[]');
+let users = JSON.parse(localStorage.getItem('users') || '[]');
+let currentUser = null;
+let urlaubstage = 24;
+let sollStunden = 8;
+let viewDate = new Date();
+
+function save() {
+  localStorage.setItem('eintraege', JSON.stringify(eintraege));
+  renderTabelle();
+}
+
+function saveUsers() {
+  localStorage.setItem('users', JSON.stringify(users));
+  renderUserSelect();
+  renderResetList();
+}
+
+function login() {
+  const name = document.getElementById('user-select').value;
+  const pin = document.getElementById('user-pin').value.trim();
+  const user = users.find(u => u.name === name && u.pin === pin);
+  if (user) {
+    currentUser = user.name;
+    document.getElementById('app').style.display = 'block';
+    document.getElementById('user-section').style.display = 'none';
+    renderTabelle();
+  } else {
+    alert("Falscher PIN");
+  }
+}
+
+function createUser() {
+  const name = document.getElementById('new-user-name').value.trim();
+  const pin = document.getElementById('new-user-pin').value.trim();
+  if (!name || pin.length !== 4) return alert("Name und 4-stelliger PIN erforderlich");
+  users.push({ name, pin });
+  saveUsers();
+}
+
+function deleteUser() {
+  const name = document.getElementById('user-select').value;
+  users = users.filter(u => u.name !== name);
+  eintraege = eintraege.filter(e => e.user !== name);
+  saveUsers();
+  save();
+}
+
+function renderUserSelect() {
+  const select = document.getElementById('user-select');
+  select.innerHTML = users.map(u => `<option value="${u.name}">${u.name}</option>`).join('');
+}
+
+function renderResetList() {
+  const container = document.getElementById('reset-area');
+  container.innerHTML = '';
+  if (currentUser) return;
+  users.forEach(user => {
+    const div = document.createElement('div');
+    div.className = 'reset-pin';
+    div.innerHTML = `
+      <label style="flex:1;">${user.name}</label>
+      <input type="password" maxlength="4" placeholder="neuer PIN" id="newpin-${user.name}" />
+      <button onclick="resetPin('${user.name}')">PIN setzen</button>
+    `;
+    container.appendChild(div);
+  });
+}
+
+function resetPin(name) {
+  const input = document.getElementById(`newpin-${name}`);
+  const pin = input.value.trim();
+  if (pin.length !== 4) return alert("Bitte 4-stelligen PIN eingeben.");
+  const user = users.find(u => u.name === name);
+  if (user) {
+    user.pin = pin;
+    saveUsers();
+    alert(`Neuer PIN fŸr ${name}: ${pin}`);
+    input.value = '';
+  }
+}
+
+function formatDate(d) {
+  return d.split("-").reverse().join(":");
+}
+
+function parseMinutes(t) {
+  const [h, m] = t.split(":").map(Number);
+  return h * 60 + m;
+}
+
+function addEntry() {
+  const datum = document.getElementById('datum').value;
+  const start = document.getElementById('startzeit').value;
+  const end = document.getElementById('endzeit').value;
+  const pause = parseInt(document.getElementById('pause').value);
+  const typ = document.getElementById('typ').value;
+  if (!datum || !start || !end) return;
+  eintraege.push({ user: currentUser, datum, start, end, pause, typ });
+  save();
+}
+
+function renderTabelle() {
+  const tbody = document.querySelector("tbody");
+  tbody.innerHTML = "";
+  const monat = viewDate.toISOString().slice(0,7);
+  let summe = 0, urlaub = 0, krank = 0;
+  eintraege
+    .filter(e => e.user === currentUser && e.datum.startsWith(monat))
+    .forEach((e, i) => {
+      const ist = Math.max(0, parseMinutes(e.end) - parseMinutes(e.start) - e.pause);
+      const istH = (ist/60).toFixed(2);
+      const diff = e.typ === "Arbeit" ? ist/60 - sollStunden : 0;
+      if (e.typ === "Arbeit") summe += diff;
+      if (e.typ === "Urlaub") urlaub++;
+      if (e.typ === "Krank") krank++;
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${formatDate(e.datum)}</td>
+        <td>${e.start}</td>
+        <td>${e.end}</td>
+        <td>${e.pause}</td>
+        <td>${e.typ}</td>
+        <td>${e.typ === "Arbeit" ? istH : ""}</td>
+        <td>${e.typ === "Arbeit" ? sollStunden : ""}</td>
+        <td>${e.typ === "Arbeit" ? diff.toFixed(2) : ""}</td>
+        <td><button class="small-btn" onclick="deleteEntry(${i})">x</button></td>
+      `;
+      tbody.appendChild(tr);
+    });
+  document.getElementById("summen").textContent =
+    `†berstunden: ${summe.toFixed(2)} | Urlaub: ${urlaub}/${urlaubstage} | Krank: ${krank}`;
+  document.getElementById("current-month").textContent = monat.slice(5,7) + "." + monat.slice(0,4);
+}
+
+function deleteEntry(index) {
+  eintraege.splice(index, 1);
+  save();
+}
+
+function changeMonth(dir) {
+  viewDate.setMonth(viewDate.getMonth() + dir);
+  renderTabelle();
+}
+
+function exportCSV() {
+  const headers = ["Datum","Kommen","Gehen","Pause","Typ","Ist","Soll","+/-"];
+  const rows = [headers];
+  eintraege.filter(e => e.user === currentUser).forEach(e => {
+    const ist = Math.max(0, parseMinutes(e.end) - parseMinutes(e.start) - e.pause);
+    const istH = (ist/60).toFixed(2);
+    const diff = e.typ === "Arbeit" ? (ist/60 - sollStunden).toFixed(2) : "";
+    rows.push([
+      formatDate(e.datum), e.start, e.end, e.pause, e.typ,
+      e.typ === "Arbeit" ? istH : "",
+      e.typ === "Arbeit" ? sollStunden : "",
+      diff
+    ]);
+  });
+  const csv = rows.map(r => r.join(";")).join("\n");
+  const blob = new Blob([csv], {type: "text/csv"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "zeiterfassung.csv";
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+renderUserSelect();
+renderResetList();
+</script>
+</body>
+</html>
