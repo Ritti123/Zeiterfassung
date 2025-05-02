@@ -1,5 +1,3 @@
-
-
 <!DOCTYPE html>
 <html lang="de">
 <head>
@@ -14,6 +12,7 @@
       --danger-color: #ea4335;
       --text-color: #333;
       --border-color: #ddd;
+      --background-color: #f9f9f9;
     }
     
     body { 
@@ -23,6 +22,7 @@
       margin: auto; 
       color: var(--text-color);
       line-height: 1.5;
+      background-color: var(--background-color);
     }
     
     h2, h3 {
@@ -67,11 +67,12 @@
       border-collapse: collapse; 
       margin-top: 20px; 
       font-size: 14px;
+      background: white;
     }
     
     th, td { 
       border: 1px solid var(--border-color); 
-      padding: 8px; 
+      padding: 10px; 
       text-align: center; 
     }
     
@@ -111,6 +112,7 @@
       padding: 15px; 
       margin-bottom: 20px; 
       border-radius: 10px;
+      background: white;
     }
     
     .reset-pin { 
@@ -147,6 +149,21 @@
       font-weight: bold;
     }
     
+    /* iPhone Optimierungen */
+    @supports (-webkit-touch-callout: none) {
+      input, select, button {
+        min-height: 44px;
+      }
+      
+      select {
+        padding: 12px 15px;
+      }
+      
+      .small-btn {
+        min-height: 30px;
+      }
+    }
+    
     @media (max-width: 480px) {
       body {
         padding: 8px;
@@ -160,16 +177,9 @@
       table {
         font-size: 12px;
       }
-    }
-    
-    /* iPhone Optimierungen */
-    @supports (-webkit-touch-callout: none) {
-      input, select, button {
-        min-height: 44px;
-      }
       
-      select {
-        padding: 12px 15px;
+      th, td {
+        padding: 6px;
       }
     }
   </style>
@@ -209,50 +219,112 @@
 </div>
 
 <div id="app" style="display:none">
-  <!-- App-Inhalt bleibt gleich -->
+  <div id="month-nav">
+    <button onclick="changeMonth(-1)">‹</button>
+    <div id="current-month"></div>
+    <button onclick="changeMonth(1)">›</button>
+  </div>
+
+  <form onsubmit="addEntry(); return false;">
+    <div class="form-group">
+      <label for="datum">Datum:</label>
+      <input type="date" id="datum" required />
+    </div>
+    <div class="form-group">
+      <label for="startzeit">Startzeit:</label>
+      <input type="time" id="startzeit" required />
+    </div>
+    <div class="form-group">
+      <label for="endzeit">Endzeit:</label>
+      <input type="time" id="endzeit" required />
+    </div>
+    <div class="form-group">
+      <label for="pause">Pause (Minuten):</label>
+      <input type="number" id="pause" placeholder="Pause in Minuten" required value="60" />
+    </div>
+    <div class="form-group">
+      <label for="typ">Art:</label>
+      <select id="typ">
+        <option value="Arbeit">Arbeit</option>
+        <option value="Urlaub">Urlaub</option>
+        <option value="Krank">Krank</option>
+        <option value="Feiertag">Feiertag</option>
+      </select>
+    </div>
+    <button type="submit">Eintragen</button>
+  </form>
+
+  <table id="tabelle">
+    <thead>
+      <tr>
+        <th>Datum</th>
+        <th>Kommen</th>
+        <th>Gehen</th>
+        <th>Pause</th>
+        <th>Typ</th>
+        <th>Ist</th>
+        <th>Soll</th>
+        <th>+/-</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+    <tfoot>
+      <tr>
+        <td colspan="8" id="summen"></td>
+      </tr>
+    </tfoot>
+  </table>
+  
+  <div class="backup-section">
+    <h3>Daten-Sicherung</h3>
+    <div class="backup-buttons">
+      <button class="secondary" onclick="exportCSV()">Excel Export</button>
+      <button class="secondary" onclick="backupData()">Komplette Sicherung erstellen</button>
+      <button onclick="document.getElementById('restore-file').click()">Sicherung wiederherstellen</button>
+      <input type="file" id="restore-file" accept=".json" style="display:none" onchange="restoreData(this.files[0])"/>
+    </div>
+  </div>
 </div>
 
 <script>
-// Dateninitialisierung
-let eintraege = JSON.parse(localStorage.getItem('eintraege')) || [];
-let users = JSON.parse(localStorage.getItem('users')) || [];
+let eintraege = JSON.parse(localStorage.getItem('eintraege') || [];
+let users = JSON.parse(localStorage.getItem('users') || '[]');
 let currentUser = null;
 let urlaubstage = 24;
 let sollStunden = 8;
 let viewDate = new Date();
 
-// Beim Laden der Seite
+// Initialisierung beim Laden
 document.addEventListener('DOMContentLoaded', function() {
-  loadData();
   renderUserSelect();
   renderResetList();
   
   // Heutiges Datum als Standard setzen
   const today = new Date();
   document.getElementById('datum').valueAsDate = today;
+  
+  // Backup-Erinnerung
+  const lastBackup = localStorage.getItem('lastBackup');
+  if (!lastBackup || (new Date() - new Date(lastBackup)) > 30*24*60*60*1000) {
+    setTimeout(() => {
+      if (confirm("Es wurde seit über 30 Tagen kein Backup erstellt.\nMöchten Sie jetzt eine Sicherung erstellen?")) {
+        backupData();
+        localStorage.setItem('lastBackup', new Date().toISOString());
+      }
+    }, 1000);
+  }
 });
 
-function loadData() {
-  try {
-    const savedEintraege = localStorage.getItem('eintraege');
-    const savedUsers = localStorage.getItem('users');
-    
-    if (savedEintraege) eintraege = JSON.parse(savedEintraege);
-    if (savedUsers) users = JSON.parse(savedUsers);
-  } catch (e) {
-    console.error("Fehler beim Laden der Daten:", e);
-    alert("Fehler beim Laden der gespeicherten Daten");
-  }
+function save() {
+  localStorage.setItem('eintraege', JSON.stringify(eintraege));
+  renderTabelle();
 }
 
-function saveData() {
-  try {
-    localStorage.setItem('eintraege', JSON.stringify(eintraege));
-    localStorage.setItem('users', JSON.stringify(users));
-  } catch (e) {
-    console.error("Fehler beim Speichern:", e);
-    alert("Fehler beim Speichern der Daten");
-  }
+function saveUsers() {
+  localStorage.setItem('users', JSON.stringify(users));
+  renderUserSelect();
+  renderResetList();
 }
 
 function login() {
@@ -288,6 +360,12 @@ function login() {
   renderTabelle();
 }
 
+function logout() {
+  currentUser = null;
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('user-section').style.display = 'block';
+}
+
 function createUser() {
   const name = document.getElementById('new-user-name').value.trim();
   const pin = document.getElementById('new-user-pin').value.trim();
@@ -309,12 +387,11 @@ function createUser() {
   
   const newUser = { name, pin };
   users.push(newUser);
-  saveData();
+  saveUsers();
   
   // Formular leeren und Select aktualisieren
   document.getElementById('new-user-name').value = '';
   document.getElementById('new-user-pin').value = '';
-  renderUserSelect();
   
   // Neuen Benutzer selektieren
   document.getElementById('user-select').value = name;
@@ -322,32 +399,221 @@ function createUser() {
   alert(`Benutzer "${name}" wurde erfolgreich angelegt`);
 }
 
-function renderUserSelect() {
-  const select = document.getElementById('user-select');
-  const currentValue = select.value;
+function deleteUser() {
+  const name = document.getElementById('user-select').value;
   
-  select.innerHTML = '<option value="">-- Bitte auswählen --</option>' + 
-    users.map(u => `<option value="${u.name}">${u.name}</option>`).join('');
+  if (!name) {
+    alert("Bitte wählen Sie einen Benutzer aus");
+    return;
+  }
   
-  if (currentValue && users.some(u => u.name === currentValue)) {
-    select.value = currentValue;
+  if (confirm(`Möchten Sie den Benutzer "${name}" wirklich löschen?\n\nAlle zugehörigen Zeiteinträge werden ebenfalls entfernt!`)) {
+    users = users.filter(u => u.name !== name);
+    eintraege = eintraege.filter(e => e.user !== name);
+    saveUsers();
+    save();
+    alert(`Benutzer "${name}" wurde gelöscht.`);
   }
 }
 
-// Rest der Funktionen bleibt gleich wie im vorherigen Code...
-
-// Initialisierung
-function init() {
-  loadData();
-  renderUserSelect();
-  renderResetList();
-  
-  // Heutiges Datum als Standard setzen
-  const today = new Date();
-  document.getElementById('datum').valueAsDate = today;
+function renderUserSelect() {
+  const select = document.getElementById('user-select');
+  select.innerHTML = '<option value="">-- Bitte auswählen --</option>' + 
+    users.map(u => `<option value="${u.name}">${u.name}</option>`).join('');
 }
 
-init();
+function renderResetList() {
+  const container = document.getElementById('reset-area');
+  container.innerHTML = '';
+  
+  users.forEach(user => {
+    const div = document.createElement('div');
+    div.className = 'reset-pin';
+    div.innerHTML = `
+      <label style="flex:1;">${user.name}</label>
+      <input type="password" maxlength="4" placeholder="neuer PIN" id="newpin-${user.name}" inputmode="numeric" />
+      <button onclick="resetPin('${user.name}')" class="small-btn">PIN setzen</button>
+    `;
+    container.appendChild(div);
+  });
+}
+
+function resetPin(name) {
+  const input = document.getElementById(`newpin-${name}`);
+  const pin = input.value.trim();
+  
+  if (pin.length !== 4 || !/^\d+$/.test(pin)) {
+    alert("Bitte einen 4-stelligen Zahlen-PIN eingeben");
+    return;
+  }
+  
+  const user = users.find(u => u.name === name);
+  if (user) {
+    user.pin = pin;
+    saveUsers();
+    alert(`PIN für ${name} wurde aktualisiert`);
+    input.value = '';
+  }
+}
+
+function formatDate(d) {
+  const [year, month, day] = d.split("-");
+  return `${day}.${month}.${year}`;
+}
+
+function parseMinutes(t) {
+  const [h, m] = t.split(":").map(Number);
+  return h * 60 + m;
+}
+
+function addEntry() {
+  const datum = document.getElementById('datum').value;
+  const start = document.getElementById('startzeit').value;
+  const end = document.getElementById('endzeit').value;
+  const pause = parseInt(document.getElementById('pause').value) || 0;
+  const typ = document.getElementById('typ').value;
+  
+  if (!datum || !start || !end) {
+    alert("Bitte füllen Sie alle erforderlichen Felder aus");
+    return;
+  }
+  
+  eintraege.push({ user: currentUser, datum, start, end, pause, typ });
+  save();
+  
+  // Formular zurücksetzen (außer Pause und Typ)
+  document.getElementById('datum').value = '';
+  document.getElementById('startzeit').value = '';
+  document.getElementById('endzeit').value = '';
+  
+  // Nächsten Tag vorauswählen
+  const nextDay = new Date(datum);
+  nextDay.setDate(nextDay.getDate() + 1);
+  document.getElementById('datum').valueAsDate = nextDay;
+}
+
+function renderTabelle() {
+  const tbody = document.querySelector("tbody");
+  tbody.innerHTML = "";
+  const monat = viewDate.toISOString().slice(0,7);
+  let summe = 0, urlaub = 0, krank = 0;
+  
+  eintraege
+    .filter(e => e.user === currentUser && e.datum.startsWith(monat))
+    .forEach((e, i) => {
+      const ist = Math.max(0, parseMinutes(e.end) - parseMinutes(e.start) - e.pause);
+      const istH = (ist/60).toFixed(2);
+      const diff = e.typ === "Arbeit" ? ist/60 - sollStunden : 0;
+      if (e.typ === "Arbeit") summe += diff;
+      if (e.typ === "Urlaub") urlaub++;
+      if (e.typ === "Krank") krank++;
+      
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${formatDate(e.datum)}</td>
+        <td>${e.start}</td>
+        <td>${e.end}</td>
+        <td>${e.pause}</td>
+        <td>${e.typ}</td>
+        <td>${e.typ === "Arbeit" ? istH : ""}</td>
+        <td>${e.typ === "Arbeit" ? sollStunden : ""}</td>
+        <td>${e.typ === "Arbeit" ? diff.toFixed(2) : ""}</td>
+        <td><button class="small-btn danger" onclick="deleteEntry(${i})">x</button></td>
+      `;
+      tbody.appendChild(tr);
+    });
+  
+  document.getElementById("summen").textContent =
+    `Überstunden: ${summe.toFixed(2)} | Urlaub: ${urlaub}/${urlaubstage} | Krank: ${krank}`;
+  document.getElementById("current-month").textContent = 
+    `${viewDate.toLocaleString('de-DE', { month: 'long', year: 'numeric' })}`;
+}
+
+function deleteEntry(index) {
+  if (confirm("Diesen Eintrag wirklich löschen?")) {
+    eintraege.splice(index, 1);
+    save();
+  }
+}
+
+function changeMonth(dir) {
+  viewDate.setMonth(viewDate.getMonth() + dir);
+  renderTabelle();
+}
+
+function exportCSV() {
+  const headers = ["Datum","Kommen","Gehen","Pause","Typ","Ist","Soll","+/-"];
+  const rows = [headers];
+  
+  eintraege
+    .filter(e => e.user === currentUser)
+    .forEach(e => {
+      const ist = Math.max(0, parseMinutes(e.end) - parseMinutes(e.start) - e.pause);
+      const istH = (ist/60).toFixed(2);
+      const diff = e.typ === "Arbeit" ? (ist/60 - sollStunden).toFixed(2) : "";
+      
+      rows.push([
+        formatDate(e.datum), 
+        e.start, 
+        e.end, 
+        e.pause, 
+        e.typ,
+        e.typ === "Arbeit" ? istH : "",
+        e.typ === "Arbeit" ? sollStunden : "",
+        diff
+      ]);
+    });
+  
+  const csv = rows.map(r => r.join(";")).join("\n");
+  const blob = new Blob(["\uFEFF"+csv], {type: "text/csv;charset=utf-8;"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `zeiterfassung-${currentUser}-${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function backupData() {
+  const data = {
+    users: users,
+    eintraege: eintraege,
+    timestamp: new Date().toISOString()
+  };
+  
+  const blob = new Blob([JSON.stringify(data, null, 2)], {type: "application/json"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `zeiterfassung-backup-${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  
+  localStorage.setItem('lastBackup', new Date().toISOString());
+  alert("Sicherung wurde erstellt und heruntergeladen");
+}
+
+function restoreData(file) {
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    if (confirm("Sicher, dass Sie Daten wiederherstellen möchten?\nExistierende Daten werden überschrieben!")) {
+      try {
+        const data = JSON.parse(e.target.result);
+        if (!data.users || !data.eintraege) throw new Error("Ungültiges Backup-Format");
+        
+        users = data.users;
+        eintraege = data.eintraege;
+        saveUsers();
+        save();
+        alert("Daten erfolgreich wiederhergestellt!");
+      } catch (error) {
+        alert("Fehler beim Wiederherstellen: " + error.message);
+      }
+    }
+  };
+  reader.onerror = () => alert("Fehler beim Lesen der Datei");
+  reader.readAsText(file);
+}
 </script>
 </body>
 </html>
