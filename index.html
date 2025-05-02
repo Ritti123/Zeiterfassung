@@ -1,97 +1,283 @@
 
+
 <!DOCTYPE html>
 <html lang="de">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+  <meta name="apple-mobile-web-app-capable" content="yes">
   <title>Zeiterfassung</title>
   <style>
-    body { font-family: sans-serif; padding: 10px; max-width: 600px; margin: auto; }
-    input, select, button { width: 100%; padding: 8px; margin: 5px 0; font-size: 1em; box-sizing: border-box; }
-    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-    th, td { border: 1px solid #ccc; padding: 6px; text-align: center; font-size: 0.9em; }
-    thead { background: #eee; }
-    tfoot { background: #f8f8f8; font-weight: bold; }
-    .small-btn { padding: 4px 8px; font-size: 0.8em; }
-    #month-nav { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; gap: 5px; }
-    #current-month { flex: 1; text-align: left; font-weight: bold; }
-    #user-section { border: 1px solid #ccc; padding: 10px; margin-bottom: 15px; }
-    .reset-pin { display: flex; gap: 5px; margin-top: 5px; align-items: center; }
-    .reset-pin input { flex: 1; }
-    .backup-section { margin-top: 20px; border-top: 1px solid #ccc; padding-top: 15px; }
-    .backup-buttons { display: flex; gap: 10px; margin-top: 10px; }
+    :root {
+      --primary-color: #4285f4;
+      --secondary-color: #34a853;
+      --danger-color: #ea4335;
+      --text-color: #333;
+      --border-color: #ddd;
+    }
+    
+    body { 
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
+      padding: 10px; 
+      max-width: 600px; 
+      margin: auto; 
+      color: var(--text-color);
+      line-height: 1.5;
+    }
+    
+    h2, h3 {
+      color: var(--primary-color);
+      margin-top: 0;
+    }
+    
+    input, select, button { 
+      width: 100%; 
+      padding: 12px; 
+      margin: 8px 0; 
+      font-size: 16px; 
+      box-sizing: border-box; 
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      -webkit-appearance: none;
+    }
+    
+    button {
+      background-color: var(--primary-color);
+      color: white;
+      border: none;
+      font-weight: bold;
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+    
+    button:hover {
+      opacity: 0.9;
+    }
+    
+    button.danger {
+      background-color: var(--danger-color);
+    }
+    
+    button.secondary {
+      background-color: var(--secondary-color);
+    }
+    
+    table { 
+      width: 100%; 
+      border-collapse: collapse; 
+      margin-top: 20px; 
+      font-size: 14px;
+    }
+    
+    th, td { 
+      border: 1px solid var(--border-color); 
+      padding: 8px; 
+      text-align: center; 
+    }
+    
+    thead { 
+      background: #f5f5f5; 
+      font-weight: bold;
+    }
+    
+    tfoot { 
+      background: #f8f8f8; 
+      font-weight: bold; 
+    }
+    
+    .small-btn { 
+      padding: 6px 10px; 
+      font-size: 12px; 
+      border-radius: 4px;
+    }
+    
+    #month-nav { 
+      display: flex; 
+      justify-content: space-between; 
+      align-items: center; 
+      margin: 15px 0; 
+      gap: 10px; 
+    }
+    
+    #current-month { 
+      flex: 1; 
+      text-align: center; 
+      font-weight: bold; 
+      font-size: 18px;
+    }
+    
+    #user-section { 
+      border: 1px solid var(--border-color); 
+      padding: 15px; 
+      margin-bottom: 20px; 
+      border-radius: 10px;
+    }
+    
+    .reset-pin { 
+      display: flex; 
+      gap: 8px; 
+      margin-top: 10px; 
+      align-items: center; 
+    }
+    
+    .reset-pin input { 
+      flex: 1; 
+    }
+    
+    .backup-section { 
+      margin-top: 25px; 
+      border-top: 1px solid var(--border-color); 
+      padding-top: 15px; 
+    }
+    
+    .backup-buttons { 
+      display: flex; 
+      flex-direction: column;
+      gap: 10px; 
+      margin-top: 15px; 
+    }
+    
+    .form-group {
+      margin-bottom: 15px;
+    }
+    
+    .form-group label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: bold;
+    }
+    
+    @media (max-width: 480px) {
+      body {
+        padding: 8px;
+      }
+      
+      input, select, button {
+        padding: 10px;
+        font-size: 14px;
+      }
+      
+      table {
+        font-size: 12px;
+      }
+    }
+    
+    /* iPhone Optimierungen */
+    @supports (-webkit-touch-callout: none) {
+      input, select, button {
+        min-height: 44px; /* Apple empfiehlt mindestens 44px für tappbare Elemente */
+      }
+      
+      select {
+        padding: 12px 15px;
+      }
+    }
   </style>
 </head>
 <body>
 
 <div id="user-section">
-  <h2>Benutzer</h2>
+  <h2>Benutzerverwaltung</h2>
   <div id="user-login">
-    <select id="user-select"></select>
-    <input type="password" id="user-pin" placeholder="4-stelliger PIN" maxlength="4" />
+    <div class="form-group">
+      <label for="user-select">Benutzer auswählen:</label>
+      <select id="user-select"></select>
+    </div>
+    <div class="form-group">
+      <label for="user-pin">PIN eingeben:</label>
+      <input type="password" id="user-pin" placeholder="4-stelliger PIN" maxlength="4" inputmode="numeric" />
+    </div>
     <button onclick="login()">Anmelden</button>
   </div>
+  
+  <h3 style="margin-top: 20px;">Benutzer erstellen/löschen</h3>
   <div id="user-manage">
-    <input type="text" id="new-user-name" placeholder="Name" />
-    <input type="password" id="new-user-pin" placeholder="PIN (4-stellig)" maxlength="4" />
+    <div class="form-group">
+      <label for="new-user-name">Neuer Benutzername:</label>
+      <input type="text" id="new-user-name" placeholder="Name eingeben" />
+    </div>
+    <div class="form-group">
+      <label for="new-user-pin">Neue PIN (4-stellig):</label>
+      <input type="password" id="new-user-pin" placeholder="PIN eingeben" maxlength="4" inputmode="numeric" />
+    </div>
     <button onclick="createUser()">Benutzer anlegen</button>
-    <button onclick="deleteUser()">Benutzer löschen</button>
-    <div id="reset-area"></div>
+    <button class="danger" onclick="deleteUser()">Benutzer löschen</button>
+    <div id="reset-area" style="margin-top: 15px;"></div>
   </div>
 </div>
 
 <div id="app" style="display:none">
   <div id="month-nav">
-    <button onclick="changeMonth(-1)">‹</button>
+    <button onclick="changeMonth(-1)">‹ Vorheriger Monat</button>
     <div id="current-month"></div>
-    <button onclick="changeMonth(1)">›</button>
+    <button onclick="changeMonth(1)">Nächster Monat ›</button>
   </div>
 
+  <h2>Neuer Zeiteintrag</h2>
   <form onsubmit="addEntry(); return false;">
-    <input type="date" id="datum" required pattern="\d{2}\.\d{2}\.\d{4}" />
-    <input type="time" id="startzeit" required />
-    <input type="time" id="endzeit" required />
-    <input type="number" id="pause" placeholder="Pause in Minuten" required value="60" />
-    <select id="typ">
-      <option value="Arbeit">Arbeit</option>
-      <option value="Urlaub">Urlaub</option>
-      <option value="Krank">Krank</option>
-      <option value="Feiertag">Feiertag</option>
-    </select>
-    <button type="submit">Eintragen</button>
+    <div class="form-group">
+      <label for="datum">Datum:</label>
+      <input type="date" id="datum" required pattern="\d{2}\.\d{2}\.\d{4}" />
+    </div>
+    <div class="form-group">
+      <label for="startzeit">Startzeit:</label>
+      <input type="time" id="startzeit" required />
+    </div>
+    <div class="form-group">
+      <label for="endzeit">Endzeit:</label>
+      <input type="time" id="endzeit" required />
+    </div>
+    <div class="form-group">
+      <label for="pause">Pausenzeit (Minuten):</label>
+      <input type="number" id="pause" placeholder="Pause in Minuten" required value="60" min="0" step="15" />
+    </div>
+    <div class="form-group">
+      <label for="typ">Art des Eintrags:</label>
+      <select id="typ">
+        <option value="Arbeit">Arbeit</option>
+        <option value="Urlaub">Urlaub</option>
+        <option value="Krank">Krankheit</option>
+        <option value="Feiertag">Feiertag</option>
+      </select>
+    </div>
+    <button type="submit">Zeiteintrag speichern</button>
   </form>
 
+  <h2>Zeiterfassung</h2>
   <table id="tabelle">
     <thead>
       <tr>
         <th>Datum</th>
-        <th>Kommen</th>
-        <th>Gehen</th>
+        <th>Start</th>
+        <th>Ende</th>
         <th>Pause</th>
-        <th>Typ</th>
-        <th>Ist</th>
+        <th>Art</th>
+        <th>Arbeitszeit</th>
         <th>Soll</th>
-        <th>+</th>
-        <th></th>
+        <th>Differenz</th>
+        <th>Aktion</th>
       </tr>
     </thead>
     <tbody></tbody>
     <tfoot>
       <tr>
-        <td colspan="8" id="summen"></td>
+        <td colspan="9" id="summen"></td>
       </tr>
     </tfoot>
   </table>
   
   <div class="backup-section">
     <h3>Daten-Sicherung</h3>
+    <p>Sichern Sie regelmäßig Ihre Daten zur Sicherheit.</p>
     <div class="backup-buttons">
-      <button onclick="exportCSV()">Excel Export</button>
-      <button onclick="backupData()">Komplette Sicherung erstellen</button>
-      <button onclick="document.getElementById('restore-file').click()">Sicherung wiederherstellen</button>
+      <button class="secondary" onclick="exportCSV()">📊 Als Excel exportieren</button>
+      <button class="secondary" onclick="backupData()">💾 Komplette Sicherung erstellen</button>
+      <button class="secondary" onclick="document.getElementById('restore-file').click()">🔄 Sicherung wiederherstellen</button>
       <input type="file" id="restore-file" accept=".json" style="display:none" onchange="restoreData(this.files[0])"/>
     </div>
   </div>
+  
+  <button style="margin-top: 30px;" class="danger" onclick="logout()">🔒 Abmelden</button>
 </div>
 
 <script>
@@ -99,15 +285,32 @@ let eintraege = JSON.parse(localStorage.getItem('eintraege') || '[]');
 let users = JSON.parse(localStorage.getItem('users') || '[]');
 let currentUser = null;
 let urlaubstage = 24;
-let sollStunden = 8;
+let sollStunden = 8; // 8 Stunden = 480 Minuten
 let viewDate = new Date();
 
 // Backup-Erinnerung
-const lastBackup = localStorage.getItem('lastBackup');
-if (!lastBackup || (new Date() - new Date(lastBackup)) > 30*24*60*60*1000) {
-  if (confirm("Es wurde seit über 30 Tagen kein Backup erstellt.\nMöchten Sie jetzt eine Sicherung erstellen?")) {
-    backupData();
-    localStorage.setItem('lastBackup', new Date().toISOString());
+function checkBackupReminder() {
+  const lastBackup = localStorage.getItem('lastBackup');
+  if (!lastBackup || (new Date() - new Date(lastBackup)) > 30*24*60*60*1000) {
+    if (confirm("Es wurde seit über 30 Tagen kein Backup erstellt.\nMöchten Sie jetzt eine Sicherung erstellen?")) {
+      backupData();
+    }
+  }
+}
+
+// Formatierung Minuten in Stunden und Minuten
+function formatMinutes(totalMinutes) {
+  if (isNaN(totalMinutes)) return "0 Min";
+  const hours = Math.floor(Math.abs(totalMinutes) / 60);
+  const minutes = Math.abs(totalMinutes) % 60;
+  const sign = totalMinutes < 0 ? "-" : "";
+  
+  if (hours > 0 && minutes > 0) {
+    return `${sign}${hours} Std ${minutes} Min`;
+  } else if (hours > 0) {
+    return `${sign}${hours} Std`;
+  } else {
+    return `${sign}${minutes} Min`;
   }
 }
 
@@ -131,23 +334,43 @@ function login() {
     document.getElementById('app').style.display = 'block';
     document.getElementById('user-section').style.display = 'none';
     renderTabelle();
+    checkBackupReminder();
+    document.getElementById('user-pin').value = '';
   } else {
-    alert("Falscher PIN");
+    alert("Falscher PIN oder Benutzer");
+  }
+}
+
+function logout() {
+  if (confirm("Möchten Sie sich wirklich abmelden?")) {
+    currentUser = null;
+    document.getElementById('app').style.display = 'none';
+    document.getElementById('user-section').style.display = 'block';
   }
 }
 
 function createUser() {
   const name = document.getElementById('new-user-name').value.trim();
   const pin = document.getElementById('new-user-pin').value.trim();
-  if (!name || pin.length !== 4) return alert("Name und 4-stelliger PIN erforderlich");
+  
+  if (!name) return alert("Bitte geben Sie einen Namen ein");
+  if (pin.length !== 4 || !/^\d+$/.test(pin)) return alert("Bitte geben Sie einen 4-stelligen Zahlen-PIN ein");
+  
+  if (users.some(u => u.name === name)) {
+    return alert("Benutzername existiert bereits");
+  }
+  
   users.push({ name, pin });
   saveUsers();
   document.getElementById('new-user-name').value = '';
   document.getElementById('new-user-pin').value = '';
+  alert(`Benutzer "${name}" wurde erfolgreich angelegt`);
 }
 
 function deleteUser() {
   const name = document.getElementById('user-select').value;
+  if (!name) return alert("Kein Benutzer ausgewählt");
+  
   if (confirm(`Möchten Sie den Benutzer "${name}" wirklich löschen?\n\nAlle zugehörigen Zeiteinträge werden ebenfalls entfernt!`)) {
     users = users.filter(u => u.name !== name);
     eintraege = eintraege.filter(e => e.user !== name);
@@ -166,13 +389,21 @@ function renderResetList() {
   const container = document.getElementById('reset-area');
   container.innerHTML = '';
   if (currentUser) return;
+  
+  if (users.length === 0) {
+    container.innerHTML = '<p>Keine Benutzer vorhanden</p>';
+    return;
+  }
+  
+  container.innerHTML = '<h4>PIN zurücksetzen</h4>';
+  
   users.forEach(user => {
     const div = document.createElement('div');
     div.className = 'reset-pin';
     div.innerHTML = `
       <label style="flex:1;">${user.name}</label>
-      <input type="password" maxlength="4" placeholder="neuer PIN" id="newpin-${user.name}" />
-      <button onclick="resetPin('${user.name}')">PIN setzen</button>
+      <input type="password" maxlength="4" placeholder="neuer PIN" id="newpin-${user.name}" inputmode="numeric" />
+      <button class="small-btn" onclick="resetPin('${user.name}')">PIN ändern</button>
     `;
     container.appendChild(div);
   });
@@ -181,12 +412,16 @@ function renderResetList() {
 function resetPin(name) {
   const input = document.getElementById(`newpin-${name}`);
   const pin = input.value.trim();
-  if (pin.length !== 4) return alert("Bitte 4-stelligen PIN eingeben.");
+  
+  if (pin.length !== 4 || !/^\d+$/.test(pin)) {
+    return alert("Bitte einen 4-stelligen Zahlen-PIN eingeben.");
+  }
+  
   const user = users.find(u => u.name === name);
   if (user) {
     user.pin = pin;
     saveUsers();
-    alert(`Neuer PIN für ${name}: ${pin}`);
+    alert(`PIN für ${name} wurde geändert`);
     input.value = '';
   }
 }
@@ -197,61 +432,129 @@ function formatDate(d) {
 }
 
 function parseMinutes(t) {
+  if (!t) return 0;
   const [h, m] = t.split(":").map(Number);
-  return h * 60 + m;
+  return h * 60 + (m || 0);
 }
 
 function addEntry() {
   const datum = document.getElementById('datum').value;
   const start = document.getElementById('startzeit').value;
   const end = document.getElementById('endzeit').value;
-  const pause = parseInt(document.getElementById('pause').value);
+  const pause = parseInt(document.getElementById('pause').value) || 0;
   const typ = document.getElementById('typ').value;
-  if (!datum || !start || !end) return;
-  eintraege.push({ user: currentUser, datum, start, end, pause, typ });
+  
+  if (!datum || !start || !end) {
+    return alert("Bitte füllen Sie alle Felder aus");
+  }
+  
+  if (parseMinutes(end) <= parseMinutes(start)) {
+    return alert("Endzeit muss nach der Startzeit liegen");
+  }
+  
+  eintraege.push({ 
+    user: currentUser, 
+    datum, 
+    start, 
+    end, 
+    pause, 
+    typ 
+  });
+  
   save();
+  
+  // Formular zurücksetzen
   document.getElementById('datum').value = '';
   document.getElementById('startzeit').value = '';
   document.getElementById('endzeit').value = '';
+  document.getElementById('pause').value = '60';
+  
+  // Zum Tabellenanfang scrollen für mobile Geräte
+  document.querySelector('table')?.scrollIntoView({ behavior: 'smooth' });
 }
 
 function renderTabelle() {
   const tbody = document.querySelector("tbody");
   tbody.innerHTML = "";
   const monat = viewDate.toISOString().slice(0,7);
-  let summe = 0, urlaub = 0, krank = 0;
-  eintraege
+  
+  let arbeitsMinuten = 0;
+  let sollMinuten = 0;
+  let urlaub = 0;
+  let krank = 0;
+  
+  const monatsEintraege = eintraege
     .filter(e => e.user === currentUser && e.datum.startsWith(monat))
-    .forEach((e, i) => {
-      const ist = Math.max(0, parseMinutes(e.end) - parseMinutes(e.start) - e.pause);
-      const istH = (ist/60).toFixed(2);
-      const diff = e.typ === "Arbeit" ? ist/60 - sollStunden : 0;
-      if (e.typ === "Arbeit") summe += diff;
-      if (e.typ === "Urlaub") urlaub++;
-      if (e.typ === "Krank") krank++;
-      const tr = document.createElement("tr");
-      tr.innerHTML = `
-        <td>${formatDate(e.datum)}</td>
-        <td>${e.start}</td>
-        <td>${e.end}</td>
-        <td>${e.pause}</td>
-        <td>${e.typ}</td>
-        <td>${e.typ === "Arbeit" ? istH : ""}</td>
-        <td>${e.typ === "Arbeit" ? sollStunden : ""}</td>
-        <td>${e.typ === "Arbeit" ? diff.toFixed(2) : ""}</td>
-        <td><button class="small-btn" onclick="deleteEntry(${i})">x</button></td>
-      `;
-      tbody.appendChild(tr);
-    });
-  document.getElementById("summen").textContent =
-    `Überstunden: ${summe.toFixed(2)} | Urlaub: ${urlaub}/${urlaubstage} | Krank: ${krank}`;
-  document.getElementById("current-month").textContent = monat.slice(5,7) + "." + monat.slice(0,4);
+    .sort((a, b) => new Date(a.datum) - new Date(b.datum)));
+  
+  monatsEintraege.forEach((e, i) => {
+    const startMinuten = parseMinutes(e.start);
+    const endMinuten = parseMinutes(e.end);
+    const istMinuten = Math.max(0, endMinuten - startMinuten - (e.pause || 0));
+    
+    if (e.typ === "Arbeit") {
+      arbeitsMinuten += istMinuten;
+      sollMinuten += sollStunden * 60;
+    } else if (e.typ === "Urlaub") {
+      urlaub++;
+    } else if (e.typ === "Krank") {
+      krank++;
+    }
+    
+    const diffMinuten = e.typ === "Arbeit" ? istMinuten - (sollStunden * 60) : 0;
+    
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${formatDate(e.datum)}</td>
+      <td>${e.start}</td>
+      <td>${e.end}</td>
+      <td>${e.pause} Min</td>
+      <td>${e.typ}</td>
+      <td>${e.typ === "Arbeit" ? formatMinutes(istMinuten) : ""}</td>
+      <td>${e.typ === "Arbeit" ? formatMinutes(sollStunden * 60) : ""}</td>
+      <td>${e.typ === "Arbeit" ? formatMinutes(diffMinuten) : ""}</td>
+      <td><button class="small-btn danger" onclick="deleteEntry(${monatsEintraege.length - 1 - i})">✕</button></td>
+    `;
+    tbody.appendChild(tr);
+  });
+  
+  const diffGesamt = arbeitsMinuten - sollMinuten;
+  
+  document.getElementById("summen").innerHTML = `
+    <strong>Zusammenfassung:</strong><br>
+    Arbeitszeit: ${formatMinutes(arbeitsMinuten)}<br>
+    Soll-Zeit: ${formatMinutes(sollMinuten)}<br>
+    Saldo: ${formatMinutes(diffGesamt)}<br>
+    Urlaubstage: ${urlaub}/${urlaubstage}<br>
+    Krankheitstage: ${krank}
+  `;
+  
+  const monthNames = ["Januar", "Februar", "März", "April", "Mai", "Juni", 
+                     "Juli", "August", "September", "Oktober", "November", "Dezember"];
+  document.getElementById("current-month").textContent = 
+    `${monthNames[viewDate.getMonth()]} ${viewDate.getFullYear()}`;
 }
 
 function deleteEntry(index) {
   if (confirm("Diesen Eintrag wirklich löschen?")) {
-    eintraege.splice(index, 1);
-    save();
+    // Finde den tatsächlichen Index im Gesamtarray
+    const monat = viewDate.toISOString().slice(0,7);
+    const monatsEintraege = eintraege
+      .filter(e => e.user === currentUser && e.datum.startsWith(monat));
+    
+    if (index >= 0 && index < monatsEintraege.length) {
+      const eintrag = monatsEintraege[index];
+      const globalIndex = eintraege.findIndex(e => 
+        e.user === currentUser && 
+        e.datum === eintrag.datum && 
+        e.start === eintrag.start && 
+        e.end === eintrag.end);
+      
+      if (globalIndex !== -1) {
+        eintraege.splice(globalIndex, 1);
+        save();
+      }
+    }
   }
 }
 
@@ -261,26 +564,41 @@ function changeMonth(dir) {
 }
 
 function exportCSV() {
-  const headers = ["Datum","Kommen","Gehen","Pause","Typ","Ist","Soll","+/-"];
+  const headers = ["Datum","Start","Ende","Pause (Min)","Art","Arbeitszeit","Soll","Differenz"];
   const rows = [headers];
-  eintraege.filter(e => e.user === currentUser).forEach(e => {
-    const ist = Math.max(0, parseMinutes(e.end) - parseMinutes(e.start) - e.pause);
-    const istH = (ist/60).toFixed(2);
-    const diff = e.typ === "Arbeit" ? (ist/60 - sollStunden).toFixed(2) : "";
-    rows.push([
-      formatDate(e.datum), e.start, e.end, e.pause, e.typ,
-      e.typ === "Arbeit" ? istH : "",
-      e.typ === "Arbeit" ? sollStunden : "",
-      diff
-    ]);
-  });
-  const csv = rows.map(r => r.join(";")).join("\n");
-  const blob = new Blob([csv], {type: "text/csv"});
+  
+  eintraege
+    .filter(e => e.user === currentUser)
+    .sort((a, b) => new Date(a.datum) - new Date(b.datum)))
+    .forEach(e => {
+      const startMinuten = parseMinutes(e.start);
+      const endMinuten = parseMinutes(e.end);
+      const istMinuten = Math.max(0, endMinuten - startMinuten - (e.pause || 0));
+      
+      rows.push([
+        formatDate(e.datum), 
+        e.start, 
+        e.end, 
+        e.pause,
+        e.typ,
+        e.typ === "Arbeit" ? formatMinutes(istMinuten) : "",
+        e.typ === "Arbeit" ? formatMinutes(sollStunden * 60) : "",
+        e.typ === "Arbeit" ? formatMinutes(istMinuten - (sollStunden * 60)) : ""
+      ]);
+    });
+  
+  const csvContent = rows.map(row => 
+    row.map(field => `"${field.replace(/"/g, '""')}"`).join(';')
+  ).join('\n');
+  
+  const blob = new Blob(["\uFEFF" + csvContent], {type: "text/csv;charset=utf-8;"});
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = "zeiterfassung.csv";
+  a.download = `zeiterfassung_${currentUser}_${new Date().toISOString().slice(0,10)}.csv`;
+  document.body.appendChild(a);
   a.click();
+  document.body.removeChild(a);
   URL.revokeObjectURL(url);
 }
 
@@ -288,15 +606,23 @@ function backupData() {
   const data = {
     users: users,
     eintraege: eintraege,
-    timestamp: new Date().toISOString()
+    meta: {
+      timestamp: new Date().toISOString(),
+      version: "1.0",
+      createdBy: "Zeiterfassungssystem"
+    }
   };
+  
   const blob = new Blob([JSON.stringify(data, null, 2)], {type: "application/json"});
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = `zeiterfassung-backup-${new Date().toISOString().slice(0,10)}.json`;
+  a.download = `zeiterfassung_backup_${new Date().toISOString().slice(0,10)}.json`;
+  document.body.appendChild(a);
   a.click();
+  document.body.removeChild(a);
   URL.revokeObjectURL(url);
+  
   localStorage.setItem('lastBackup', new Date().toISOString());
   alert("Sicherung wurde erstellt und heruntergeladen");
 }
@@ -304,27 +630,64 @@ function backupData() {
 function restoreData(file) {
   const reader = new FileReader();
   reader.onload = function(e) {
-    if (confirm("Sicher, dass Sie Daten wiederherstellen möchten?\nExistierende Daten werden überschrieben!")) {
+    if (confirm("Sicher, dass Sie diese Sicherung wiederherstellen möchten?\nAlle aktuellen Daten werden überschrieben!")) {
       try {
         const data = JSON.parse(e.target.result);
-        if (!data.users || !data.eintraege) throw new Error("Ungültiges Backup-Format");
+        
+        if (!data.users || !data.eintraege) {
+          throw new Error("Ungültiges Backup-Format: Benutzer oder Einträge fehlen");
+        }
+        
+        // Bestätigung für jeden Benutzer, der überschrieben wird
+        const existingUsers = users.map(u => u.name);
+        const overwrittenUsers = data.users.filter(u => existingUsers.includes(u.name));
+        
+        if (overwrittenUsers.length > 0) {
+          if (!confirm(`Folgende Benutzer werden überschrieben:\n${overwrittenUsers.map(u => u.name).join(', ')}\nFortfahren?`)) {
+            return;
+          }
+        }
         
         users = data.users;
         eintraege = data.eintraege;
         saveUsers();
         save();
-        alert("Daten erfolgreich wiederhergestellt!");
+        
+        alert(`Daten erfolgreich wiederhergestellt!\n${data.users.length} Benutzer\n${data.eintraege.length} Zeiteinträge`);
+        
+        if (currentUser) {
+          renderTabelle();
+        }
       } catch (error) {
-        alert("Fehler beim Wiederherstellen: " + error.message);
+        alert("Fehler beim Wiederherstellen:\n" + error.message);
       }
     }
   };
+  
+  reader.onerror = function() {
+    alert("Fehler beim Lesen der Datei");
+  };
+  
   reader.readAsText(file);
 }
 
 // Initialisierung
-renderUserSelect();
-renderResetList();
+document.addEventListener('DOMContentLoaded', function() {
+  renderUserSelect();
+  renderResetList();
+  
+  // Heutiges Datum als Standard setzen
+  const today = new Date();
+  document.getElementById('datum').valueAsDate = today;
+  
+  // Für mobile Geräte: Datumseingabe optimieren
+  if (/iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+    document.getElementById('datum').addEventListener('focus', function() {
+      this.blur(); // Standard-Picker schließen
+      // Alternativen Picker anzeigen oder andere Lösung
+    });
+  }
+});
 </script>
 </body>
 </html>
