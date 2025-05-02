@@ -1,5 +1,5 @@
 
-
+```html
 <!DOCTYPE html>
 <html lang="de">
 <head>
@@ -19,6 +19,8 @@
     #user-section { border: 1px solid #ccc; padding: 10px; margin-bottom: 15px; }
     .reset-pin { display: flex; gap: 5px; margin-top: 5px; align-items: center; }
     .reset-pin input { flex: 1; }
+    .backup-section { margin-top: 20px; border-top: 1px solid #ccc; padding-top: 15px; }
+    .backup-buttons { display: flex; gap: 10px; margin-top: 10px; }
   </style>
 </head>
 <body>
@@ -34,20 +36,20 @@
     <input type="text" id="new-user-name" placeholder="Name" />
     <input type="password" id="new-user-pin" placeholder="PIN (4-stellig)" maxlength="4" />
     <button onclick="createUser()">Benutzer anlegen</button>
-    <button onclick="deleteUser()">Benutzer l�schen</button>
+    <button onclick="deleteUser()">Benutzer löschen</button>
     <div id="reset-area"></div>
   </div>
 </div>
 
 <div id="app" style="display:none">
   <div id="month-nav">
-    <button onclick="changeMonth(-1)">�</button>
+    <button onclick="changeMonth(-1)">‹</button>
     <div id="current-month"></div>
-    <button onclick="changeMonth(1)">�</button>
+    <button onclick="changeMonth(1)">›</button>
   </div>
 
   <form onsubmit="addEntry(); return false;">
-    <input type="date" id="datum" required />
+    <input type="date" id="datum" required pattern="\d{2}\.\d{2}\.\d{4}" />
     <input type="time" id="startzeit" required />
     <input type="time" id="endzeit" required />
     <input type="number" id="pause" placeholder="Pause in Minuten" required value="60" />
@@ -81,7 +83,16 @@
       </tr>
     </tfoot>
   </table>
-  <button onclick="exportCSV()">Excel Export</button>
+  
+  <div class="backup-section">
+    <h3>Daten-Sicherung</h3>
+    <div class="backup-buttons">
+      <button onclick="exportCSV()">Excel Export</button>
+      <button onclick="backupData()">Komplette Sicherung erstellen</button>
+      <button onclick="document.getElementById('restore-file').click()">Sicherung wiederherstellen</button>
+      <input type="file" id="restore-file" accept=".json" style="display:none" onchange="restoreData(this.files[0])"/>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -91,6 +102,15 @@ let currentUser = null;
 let urlaubstage = 24;
 let sollStunden = 8;
 let viewDate = new Date();
+
+// Backup-Erinnerung
+const lastBackup = localStorage.getItem('lastBackup');
+if (!lastBackup || (new Date() - new Date(lastBackup)) > 30*24*60*60*1000) {
+  if (confirm("Es wurde seit über 30 Tagen kein Backup erstellt.\nMöchten Sie jetzt eine Sicherung erstellen?")) {
+    backupData();
+    localStorage.setItem('lastBackup', new Date().toISOString());
+  }
+}
 
 function save() {
   localStorage.setItem('eintraege', JSON.stringify(eintraege));
@@ -123,14 +143,19 @@ function createUser() {
   if (!name || pin.length !== 4) return alert("Name und 4-stelliger PIN erforderlich");
   users.push({ name, pin });
   saveUsers();
+  document.getElementById('new-user-name').value = '';
+  document.getElementById('new-user-pin').value = '';
 }
 
 function deleteUser() {
   const name = document.getElementById('user-select').value;
-  users = users.filter(u => u.name !== name);
-  eintraege = eintraege.filter(e => e.user !== name);
-  saveUsers();
-  save();
+  if (confirm(`Möchten Sie den Benutzer "${name}" wirklich löschen?\n\nAlle zugehörigen Zeiteinträge werden ebenfalls entfernt!`)) {
+    users = users.filter(u => u.name !== name);
+    eintraege = eintraege.filter(e => e.user !== name);
+    saveUsers();
+    save();
+    alert(`Benutzer "${name}" wurde gelöscht.`);
+  }
 }
 
 function renderUserSelect() {
@@ -162,13 +187,14 @@ function resetPin(name) {
   if (user) {
     user.pin = pin;
     saveUsers();
-    alert(`Neuer PIN f�r ${name}: ${pin}`);
+    alert(`Neuer PIN für ${name}: ${pin}`);
     input.value = '';
   }
 }
 
 function formatDate(d) {
-  return d.split("-").reverse().join(":");
+  const [year, month, day] = d.split("-");
+  return `${day}.${month}.${year}`;
 }
 
 function parseMinutes(t) {
@@ -185,6 +211,9 @@ function addEntry() {
   if (!datum || !start || !end) return;
   eintraege.push({ user: currentUser, datum, start, end, pause, typ });
   save();
+  document.getElementById('datum').value = '';
+  document.getElementById('startzeit').value = '';
+  document.getElementById('endzeit').value = '';
 }
 
 function renderTabelle() {
@@ -216,13 +245,15 @@ function renderTabelle() {
       tbody.appendChild(tr);
     });
   document.getElementById("summen").textContent =
-    `�berstunden: ${summe.toFixed(2)} | Urlaub: ${urlaub}/${urlaubstage} | Krank: ${krank}`;
+    `Überstunden: ${summe.toFixed(2)} | Urlaub: ${urlaub}/${urlaubstage} | Krank: ${krank}`;
   document.getElementById("current-month").textContent = monat.slice(5,7) + "." + monat.slice(0,4);
 }
 
 function deleteEntry(index) {
-  eintraege.splice(index, 1);
-  save();
+  if (confirm("Diesen Eintrag wirklich löschen?")) {
+    eintraege.splice(index, 1);
+    save();
+  }
 }
 
 function changeMonth(dir) {
@@ -254,8 +285,48 @@ function exportCSV() {
   URL.revokeObjectURL(url);
 }
 
+function backupData() {
+  const data = {
+    users: users,
+    eintraege: eintraege,
+    timestamp: new Date().toISOString()
+  };
+  const blob = new Blob([JSON.stringify(data, null, 2)], {type: "application/json"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `zeiterfassung-backup-${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  localStorage.setItem('lastBackup', new Date().toISOString());
+  alert("Sicherung wurde erstellt und heruntergeladen");
+}
+
+function restoreData(file) {
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    if (confirm("Sicher, dass Sie Daten wiederherstellen möchten?\nExistierende Daten werden überschrieben!")) {
+      try {
+        const data = JSON.parse(e.target.result);
+        if (!data.users || !data.eintraege) throw new Error("Ungültiges Backup-Format");
+        
+        users = data.users;
+        eintraege = data.eintraege;
+        saveUsers();
+        save();
+        alert("Daten erfolgreich wiederhergestellt!");
+      } catch (error) {
+        alert("Fehler beim Wiederherstellen: " + error.message);
+      }
+    }
+  };
+  reader.readAsText(file);
+}
+
+// Initialisierung
 renderUserSelect();
 renderResetList();
 </script>
 </body>
 </html>
+```
