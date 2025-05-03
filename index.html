@@ -373,7 +373,6 @@
         .filter(e => e.date && e.date.startsWith(selectedMonth))
         .sort((a, b) => new Date(a.date) - new Date(b.date));
       
-      const workHoursPerDay = parseFloat(localStorage.getItem('workHours') || 8) * 60;
       const totalVacationDays = parseInt(localStorage.getItem('vacationDays') || 24);
 
       entries.forEach(entry => {
@@ -389,14 +388,20 @@
         if (entry.type === 'Arbeit') {
           const [h, m] = (entry.hours || '0:00').split(":").map(Number);
           istMin = h * 60 + m;
-          overtimeMinutes += istMin - workHoursPerDay;
+          // Verwende die gespeicherten Sollstunden des Eintrags oder fallback zum aktuellen Wert
+          const sollMin = entry.sollHours ? entry.sollHours * 60 : parseFloat(localStorage.getItem('workHours') || 8) * 60;
+          overtimeMinutes += istMin - sollMin;
         } else if (entry.type === 'Urlaub') vacation++;
         else if (entry.type === 'Krank') sick++;
 
-        row.insertCell(6).textContent = entry.type === 'Arbeit' ? 
-          `${Math.floor(workHoursPerDay / 60)}:${String(workHoursPerDay % 60).padStart(2, '0')}` : '-';
+        // Zeige die gespeicherten Sollstunden des Eintrags oder fallback zum aktuellen Wert
+        const sollHours = entry.sollHours ? entry.sollHours : parseFloat(localStorage.getItem('workHours') || 8);
+        const sollMinTotal = sollHours * 60;
+        row.insertCell(6).textContent = entry.type === 'Arbeit' 
+          ? `${Math.floor(sollHours)}:${String(Math.round((sollHours % 1) * 60).padStart(2, '0')}`
+          : '-';
 
-        let diff = istMin - workHoursPerDay;
+        let diff = istMin - sollMinTotal;
         row.insertCell(7).textContent = entry.type === 'Arbeit'
           ? `${diff < 0 ? '-' : ''}${Math.floor(Math.abs(diff) / 60)}:${String(Math.abs(diff) % 60).padStart(2, '0')}`
           : '-';
@@ -445,6 +450,7 @@
       const end = document.getElementById('end-time').value;
       const pause = parseInt(document.getElementById('break').value) || 0;
       const type = document.getElementById('type').value;
+      const sollHours = parseFloat(workHoursInput.value);
 
       if (!date) {
         alert('Bitte Datum ausfüllen.');
@@ -495,7 +501,8 @@
         date, 
         type,
         hours: '0:00',
-        pause: type === 'Arbeit' ? pause : 0
+        pause: type === 'Arbeit' ? pause : 0,
+        sollHours: sollHours // Speichere die Sollstunden mit dem Eintrag
       };
 
       if (type === 'Arbeit') {
@@ -523,6 +530,7 @@
       const startDate = document.getElementById('date').value;
       const endDate = document.getElementById('vacation-end-date').value;
       const type = 'Urlaub';
+      const sollHours = parseFloat(workHoursInput.value);
 
       if (!startDate || !endDate) {
         alert('Bitte Start- und Enddatum ausfüllen.');
@@ -559,7 +567,12 @@
 
       while (currentDate <= end) {
         const dateStr = currentDate.toISOString().split('T')[0];
-        const entry = { date: dateStr, type, hours: '0:00' };
+        const entry = { 
+          date: dateStr, 
+          type, 
+          hours: '0:00',
+          sollHours: sollHours // Speichere die Sollstunden mit dem Eintrag
+        };
 
         try {
           await saveEntry(entry);
@@ -616,9 +629,10 @@
       const entries = timeEntries.filter(e => e.date && e.date.startsWith(selectedMonth));
       if (entries.length === 0) return alert('Keine Daten vorhanden.');
 
-      let csv = `Monatsreport ${monthNames[parseInt(month)-1]} ${year}\nDatum;Kommen;Gehen;Pause;Art;Stunden\n`;
+      let csv = `Monatsreport ${monthNames[parseInt(month)-1]} ${year}\nDatum;Kommen;Gehen;Pause;Art;Stunden;Sollstunden\n`;
       entries.forEach(e => {
-        csv += `${formatDate(e.date)};${e.type === 'Arbeit' ? e.start || '' : ''};${e.type === 'Arbeit' ? e.end || '' : ''};${e.type === 'Arbeit' ? e.pause : ''};${e.type};${e.hours || '0:00'}\n`;
+        const sollHours = e.sollHours ? e.sollHours : parseFloat(localStorage.getItem('workHours') || 8);
+        csv += `${formatDate(e.date)};${e.type === 'Arbeit' ? e.start || '' : ''};${e.type === 'Arbeit' ? e.end || '' : ''};${e.type === 'Arbeit' ? e.pause : ''};${e.type};${e.hours || '0:00'};${sollHours}\n`;
       });
 
       const overtime = document.getElementById('overtime').textContent;
@@ -645,16 +659,31 @@
       doc.text(`Monatsreport ${monthNames[parseInt(month)-1]} ${year}`, 105, 15, { align: 'center' });
       
       // Tabelle
-      const headers = [['Datum', 'Kommen', 'Gehen', 'Pause', 'Art', 'Stunden', 'Differenz']];
-      const data = entries.map(e => [
-        formatDate(e.date),
-        e.type === 'Arbeit' ? e.start || '-' : '-',
-        e.type === 'Arbeit' ? e.end || '-' : '-',
-        e.type === 'Arbeit' ? e.pause || '0' : '-',
-        e.type,
-        e.hours || '0:00',
-        e.type === 'Arbeit' ? e.hours || '0:00' : '-'
-      ]);
+      const headers = [['Datum', 'Kommen', 'Gehen', 'Pause', 'Art', 'Stunden', 'Soll', 'Differenz']];
+      const data = entries.map(e => {
+        const sollHours = e.sollHours ? e.sollHours : parseFloat(localStorage.getItem('workHours') || 8);
+        const sollStr = `${Math.floor(sollHours)}:${String(Math.round((sollHours % 1) * 60)).padStart(2, '0')}`;
+        
+        let diffStr = '-';
+        if (e.type === 'Arbeit') {
+          const [h, m] = (e.hours || '0:00').split(":").map(Number);
+          const istMin = h * 60 + m;
+          const sollMin = sollHours * 60;
+          const diff = istMin - sollMin;
+          diffStr = `${diff < 0 ? '-' : ''}${Math.floor(Math.abs(diff) / 60)}:${String(Math.abs(diff) % 60).padStart(2, '0')}`;
+        }
+        
+        return [
+          formatDate(e.date),
+          e.type === 'Arbeit' ? e.start || '-' : '-',
+          e.type === 'Arbeit' ? e.end || '-' : '-',
+          e.type === 'Arbeit' ? e.pause || '0' : '-',
+          e.type,
+          e.hours || '0:00',
+          e.type === 'Arbeit' ? sollStr : '-',
+          diffStr
+        ];
+      });
       
       doc.autoTable({
         head: headers,
