@@ -5,274 +5,279 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Zeiterfassung</title>
   <style>
+    :root {
+      --blue: #3498db;
+      --green: #2ecc71;
+      --red: #e74c3c;
+      --gray: #f4f4f4;
+      --font: "Segoe UI", Roboto, Arial, sans-serif;
+    }
     body {
-      font-family: Arial, sans-serif;
-      max-width: 1000px;
-      margin: 0 auto;
-      padding: 20px;
+      font-family: var(--font);
+      margin: 0;
+      padding: 10px;
+      background: white;
+      color: #333;
+      max-width: 600px;
+      margin: auto;
+    }
+    h2, h3, h4 {
+      margin-top: 1.2em;
+      margin-bottom: 0.5em;
     }
     .section {
-      border: 1px solid #ddd;
-      padding: 20px;
+      background: var(--gray);
+      padding: 15px;
       margin-bottom: 20px;
-      border-radius: 5px;
+      border-radius: 8px;
     }
     input, select, button {
-      padding: 10px;
-      margin: 8px 0;
       width: 100%;
-      box-sizing: border-box;
+      padding: 10px;
+      margin-top: 8px;
+      margin-bottom: 15px;
       border: 1px solid #ccc;
-      border-radius: 4px;
+      border-radius: 6px;
+      box-sizing: border-box;
+      font-size: 16px;
     }
     button {
-      background-color: #3498db;
+      background-color: var(--blue);
       color: white;
+      font-weight: bold;
       border: none;
       cursor: pointer;
-      font-weight: bold;
-    }
-    button.delete {
-      background-color: #e74c3c;
     }
     button.secondary {
-      background-color: #2ecc71;
+      background-color: var(--green);
+    }
+    button.delete {
+      background-color: var(--red);
+      font-size: 14px;
+      padding: 6px;
     }
     table {
       width: 100%;
       border-collapse: collapse;
-      margin-top: 20px;
+      font-size: 14px;
     }
     th, td {
       border: 1px solid #ccc;
-      padding: 8px;
+      padding: 6px;
       text-align: center;
     }
     th {
-      background-color: #f9f9f9;
+      background: #eee;
     }
     .stats {
       display: flex;
-      justify-content: space-between;
       flex-wrap: wrap;
       gap: 10px;
-      margin-top: 20px;
+      margin-top: 10px;
     }
     .stat-box {
       flex: 1;
-      min-width: 200px;
+      min-width: 130px;
+      background: white;
       border: 1px solid #ccc;
-      padding: 10px;
-      border-radius: 5px;
-    }
-    .month-selector {
-      margin-bottom: 15px;
+      padding: 8px;
+      border-radius: 6px;
+      text-align: center;
     }
   </style>
 </head>
 <body>
   <div class="section">
-    <h2>Zeiterfassung</h2>
+    <h2>Einstellungen</h2>
+    <label>Sollstunden pro Tag:</label>
+    <input type="number" id="config-workhours" min="1" max="24">
+    <label>Urlaubsanspruch (Tage/Jahr):</label>
+    <input type="number" id="config-vacation" min="1" max="60">
+    <button id="save-settings-btn" class="secondary">Einstellungen speichern</button>
+  </div>
 
-    <div>
-      <label for="date">Datum:</label>
-      <input type="date" id="date">
-    </div>
-    <div>
-      <label for="start-time">Startzeit:</label>
-      <input type="time" id="start-time">
-    </div>
-    <div>
-      <label for="end-time">Endzeit:</label>
-      <input type="time" id="end-time">
-    </div>
-    <div>
-      <label for="break">Pause (Minuten):</label>
-      <input type="number" id="break" value="30">
-    </div>
-    <div>
-      <label for="type">Art:</label>
-      <select id="type">
-        <option value="Arbeit">Arbeit</option>
-        <option value="Urlaub">Urlaub</option>
-        <option value="Krank">Krank</option>
-        <option value="Feiertag">Feiertag</option>
-      </select>
-    </div>
+  <div class="section">
+    <h2>Zeiterfassung</h2>
+    <input type="date" id="date">
+    <input type="time" id="start-time" placeholder="Startzeit">
+    <input type="time" id="end-time" placeholder="Endzeit">
+    <input type="number" id="break" value="30" placeholder="Pause in Minuten">
+    <select id="type">
+      <option value="Arbeit">Arbeit</option>
+      <option value="Urlaub">Urlaub</option>
+      <option value="Krank">Krank</option>
+      <option value="Feiertag">Feiertag</option>
+    </select>
     <button id="add-entry-btn">Eintrag hinzufügen</button>
 
-    <div class="month-selector">
-      <label for="month">Monat anzeigen:</label>
-      <input type="month" id="month">
-    </div>
+    <label for="month">Monat anzeigen:</label>
+    <input type="month" id="month">
 
-    <h3>Zeiteinträge</h3>
-    <table id="time-entries">
+    <h3>Einträge</h3>
+    <table>
       <thead>
         <tr>
-          <th>Datum</th>
-          <th>Start</th>
-          <th>Ende</th>
-          <th>Pause</th>
-          <th>Art</th>
-          <th>Stunden</th>
-          <th>Aktion</th>
+          <th>Datum</th><th>Start</th><th>Ende</th><th>Pause</th><th>Art</th><th>Stunden</th><th>Aktion</th>
         </tr>
       </thead>
-      <tbody></tbody>
+      <tbody id="time-entries"></tbody>
     </table>
 
     <div class="stats">
-      <div class="stat-box">
-        <h4>Überstunden</h4>
-        <p id="overtime">0 Stunden</p>
-      </div>
-      <div class="stat-box">
-        <h4>Urlaubstage</h4>
-        <p id="vacation-days">0 Tage</p>
-      </div>
-      <div class="stat-box">
-        <h4>Krankheitstage</h4>
-        <p id="sick-days">0 Tage</p>
-      </div>
-      <div class="stat-box">
-        <h4>Feiertage</h4>
-        <p id="holiday-days">0 Tage</p>
-      </div>
+      <div class="stat-box"><h4>Überstunden</h4><p id="overtime">0h 0min</p></div>
+      <div class="stat-box"><h4>Urlaub</h4><p id="vacation-days">0 Tage</p></div>
+      <div class="stat-box"><h4>Krank</h4><p id="sick-days">0 Tage</p></div>
     </div>
 
-    <button id="export-csv-btn" class="secondary">Als CSV exportieren</button>
+    <button id="export-csv-btn" class="secondary">Monatsreport (CSV)</button>
     <button id="export-backup-btn" class="secondary">Daten sichern</button>
-    <button id="import-backup-btn">Daten wiederherstellen</button>
+    <button id="import-backup-btn">Daten laden</button>
     <input type="file" id="import-file" style="display:none">
   </div>
 
   <script>
-    const WORK_HOURS_PER_DAY = 8;
-    const VACATION_DAYS_PER_YEAR = 24;
-
+    let settings = JSON.parse(localStorage.getItem('settings') || '{"workHoursPerDay":8,"vacationDaysPerYear":24}');
     let timeEntries = JSON.parse(localStorage.getItem('timeEntries') || '[]');
 
-    const addEntryBtn = document.getElementById('add-entry-btn');
-    const exportCsvBtn = document.getElementById('export-csv-btn');
-    const exportBackupBtn = document.getElementById('export-backup-btn');
-    const importBackupBtn = document.getElementById('import-backup-btn');
-    const importFile = document.getElementById('import-file');
-    const tbody = document.querySelector('#time-entries tbody');
-    const monthInput = document.getElementById('month');
-
-    addEntryBtn.addEventListener('click', addTimeEntry);
-    exportCsvBtn.addEventListener('click', exportCSV);
-    exportBackupBtn.addEventListener('click', exportBackup);
-    importBackupBtn.addEventListener('click', () => importFile.click());
-    importFile.addEventListener('change', handleImport);
-    monthInput.addEventListener('change', loadEntries);
+    const $ = id => document.getElementById(id);
+    const tbody = $('time-entries');
 
     document.addEventListener('DOMContentLoaded', () => {
-      document.getElementById('date').valueAsDate = new Date();
+      $('date').valueAsDate = new Date();
       const now = new Date();
-      monthInput.value = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+      $('month').value = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2, '0')}`;
+      $('config-workhours').value = settings.workHoursPerDay;
+      $('config-vacation').value = settings.vacationDaysPerYear;
       loadEntries();
     });
 
-    function addTimeEntry() {
-      const date = document.getElementById('date').value;
-      const start = document.getElementById('start-time').value;
-      const end = document.getElementById('end-time').value;
-      const pause = parseInt(document.getElementById('break').value) || 0;
-      const type = document.getElementById('type').value;
+    $('save-settings-btn').onclick = () => {
+      settings.workHoursPerDay = parseInt($('config-workhours').value) || 8;
+      settings.vacationDaysPerYear = parseInt($('config-vacation').value) || 24;
+      localStorage.setItem('settings', JSON.stringify(settings));
+      alert('Einstellungen gespeichert.');
+      loadEntries();
+    };
 
-      if (!date || (!start && type === 'Arbeit') || (!end && type === 'Arbeit')) {
-        alert('Bitte alle Pflichtfelder ausfüllen.');
-        return;
-      }
+    $('add-entry-btn').onclick = () => {
+      const date = $('date').value;
+      const start = $('start-time').value;
+      const end = $('end-time').value;
+      const pause = parseInt($('break').value) || 0;
+      const type = $('type').value;
+
+      if (!date || (type === 'Arbeit' && (!start || !end))) return alert('Bitte alle Felder ausfüllen.');
 
       let hours = 0;
       if (type === 'Arbeit') {
-        const startDate = new Date(`${date}T${start}`);
-        const endDate = new Date(`${date}T${end}`);
-        const diff = (endDate - startDate) / 60000 - pause;
-        if (diff <= 0) {
-          alert('Endzeit muss nach Startzeit liegen.');
-          return;
-        }
-        hours = (diff / 60).toFixed(2);
+        const startMin = new Date(`${date}T${start}`).getTime() / 60000;
+        const endMin = new Date(`${date}T${end}`).getTime() / 60000;
+        if (endMin <= startMin) return alert('Endzeit muss nach Startzeit liegen.');
+        hours = ((endMin - startMin - pause) / 60).toFixed(2);
       }
 
       timeEntries.push({ date, start, end, pause, type, hours });
       localStorage.setItem('timeEntries', JSON.stringify(timeEntries));
+      $('start-time').value = '';
+      $('end-time').value = '';
+      $('date').valueAsDate = new Date(new Date(date).getTime() + 86400000);
       loadEntries();
-      document.getElementById('start-time').value = '';
-      document.getElementById('end-time').value = '';
-      document.getElementById('date').valueAsDate = new Date(new Date(date).getTime() + 86400000);
-    }
+    };
+
+    $('month').onchange = loadEntries;
 
     function loadEntries() {
       tbody.innerHTML = '';
-      let overtime = 0;
-      let vacation = 0;
-      let sick = 0;
-      let holidays = 0;
+      let overtimeMin = 0, vacation = 0, sick = 0;
+      const month = $('month').value;
+      const rows = timeEntries.filter(e => e.date.startsWith(month)).sort((a, b) => a.date.localeCompare(b.date));
 
-      const selectedMonth = monthInput.value;
-      const entries = timeEntries.filter(e => e.date.startsWith(selectedMonth)).sort((a, b) => new Date(a.date) - new Date(b.date));
-
-      entries.forEach((entry, index) => {
-        const row = tbody.insertRow();
-        row.insertCell(0).textContent = formatDate(entry.date);
-        row.insertCell(1).textContent = entry.start || '-';
-        row.insertCell(2).textContent = entry.end || '-';
-        row.insertCell(3).textContent = entry.pause || 0;
-        row.insertCell(4).textContent = entry.type;
-        row.insertCell(5).textContent = entry.hours || '0';
-
-        if (entry.type === 'Arbeit') {
-          overtime += parseFloat(entry.hours) - WORK_HOURS_PER_DAY;
-        } else if (entry.type === 'Urlaub') {
-          vacation++;
-        } else if (entry.type === 'Krank') {
-          sick++;
-        } else if (entry.type === 'Feiertag') {
-          holidays++;
-        }
-
-        const deleteBtn = document.createElement('button');
-        deleteBtn.textContent = 'Löschen';
-        deleteBtn.className = 'delete';
-        deleteBtn.onclick = () => {
-          const indexAll = timeEntries.indexOf(entry);
-          timeEntries.splice(indexAll, 1);
+      rows.forEach(entry => {
+        const tr = tbody.insertRow();
+        tr.innerHTML = `
+          <td>${formatDate(entry.date)}</td>
+          <td>${entry.start || '-'}</td>
+          <td>${entry.end || '-'}</td>
+          <td>${entry.pause || 0}</td>
+          <td>${entry.type}</td>
+          <td>${entry.hours || '0'}</td>
+          <td><button class="delete">Löschen</button></td>`;
+        tr.querySelector('button').onclick = () => {
+          timeEntries.splice(timeEntries.indexOf(entry), 1);
           localStorage.setItem('timeEntries', JSON.stringify(timeEntries));
           loadEntries();
         };
-        row.insertCell(6).appendChild(deleteBtn);
+
+        if (entry.type === 'Arbeit') {
+          const mins = parseFloat(entry.hours) * 60;
+          overtimeMin += mins - settings.workHoursPerDay * 60;
+        } else if (entry.type === 'Urlaub') vacation++;
+        else if (entry.type === 'Krank') sick++;
       });
 
-      document.getElementById('overtime').textContent = `${overtime.toFixed(2)} Stunden`;
-      document.getElementById('vacation-days').textContent = `${vacation} Tage`;
-      document.getElementById('sick-days').textContent = `${sick} Tage`;
-      document.getElementById('holiday-days').textContent = `${holidays} Tage`;
+      $('overtime').textContent = formatMinutes(overtimeMin);
+      $('vacation-days').textContent = `${vacation} Tage`;
+      $('sick-days').textContent = `${sick} Tage`;
     }
 
-    function formatDate(dateStr) {
-      const [y, m, d] = dateStr.split('-');
-      return `${d}.${m}.${y}`;
+    function formatDate(d) {
+      const [y,m,day] = d.split('-');
+      return `${day}.${m}.${y}`;
     }
 
-    function exportCSV() {
-      if (timeEntries.length === 0) return alert('Keine Daten vorhanden.');
+    function formatMinutes(mins) {
+      const h = Math.floor(mins / 60);
+      const m = Math.round(mins % 60);
+      return `${h}h ${m}min`;
+    }
+
+    $('export-csv-btn').onclick = () => {
+      const month = $('month').value;
+      const rows = timeEntries.filter(e => e.date.startsWith(month));
+      if (!rows.length) return alert('Keine Daten vorhanden.');
 
       let csv = 'Datum;Start;Ende;Pause;Art;Stunden\n';
-      timeEntries.forEach(e => {
-        csv += `${formatDate(e.date)};${e.start || ''};${e.end || ''};${e.pause};${e.type};${e.hours}\n`;
-      });
-      download('zeiterfassung.csv', csv, 'text/csv');
-    }
+      let overtimeMin = 0, vacation = 0, sick = 0;
 
-    function exportBackup() {
+      rows.forEach(e => {
+        csv += `${formatDate(e.date)};${e.start || ''};${e.end || ''};${e.pause};${e.type};${e.hours}\n`;
+        if (e.type === 'Arbeit') overtimeMin += parseFloat(e.hours) * 60 - settings.workHoursPerDay * 60;
+        else if (e.type === 'Urlaub') vacation++;
+        else if (e.type === 'Krank') sick++;
+      });
+
+      csv += `\nÜberstunden:;${formatMinutes(overtimeMin)}\n`;
+      csv += `Urlaubstage:;${vacation}\n`;
+      csv += `Krankheitstage:;${sick}\n`;
+      download('monatsreport.csv', csv, 'text/csv');
+    };
+
+    $('export-backup-btn').onclick = () => {
       const data = { entries: timeEntries, exported: new Date().toISOString() };
       download('backup_zeiterfassung.json', JSON.stringify(data, null, 2), 'application/json');
-    }
+    };
+
+    $('import-backup-btn').onclick = () => $('import-file').click();
+    $('import-file').onchange = e => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = e => {
+        try {
+          const data = JSON.parse(e.target.result);
+          if (!Array.isArray(data.entries)) throw new Error('Ungültiges Format.');
+          if (confirm(`${data.entries.length} Einträge importieren? Vorherige Daten werden überschrieben.`)) {
+            timeEntries = data.entries;
+            localStorage.setItem('timeEntries', JSON.stringify(timeEntries));
+            loadEntries();
+            alert('Import erfolgreich.');
+          }
+        } catch (err) {
+          alert('Fehler: ' + err.message);
+        }
+      };
+      reader.readAsText(file);
+    };
 
     function download(filename, content, type) {
       const blob = new Blob(["\uFEFF" + content], { type });
@@ -282,28 +287,8 @@
       link.click();
       URL.revokeObjectURL(link.href);
     }
-
-    function handleImport(e) {
-      const file = e.target.files[0];
-      if (!file) return;
-
-      const reader = new FileReader();
-      reader.onload = function (event) {
-        try {
-          const data = JSON.parse(event.target.result);
-          if (!Array.isArray(data.entries)) throw new Error('Ungültiges Format');
-          if (confirm(`${data.entries.length} Einträge importieren? Vorherige Daten werden überschrieben.`)) {
-            timeEntries = data.entries;
-            localStorage.setItem('timeEntries', JSON.stringify(timeEntries));
-            loadEntries();
-            alert('Import erfolgreich.');
-          }
-        } catch (err) {
-          alert('Fehler beim Import: ' + err.message);
-        }
-      };
-      reader.readAsText(file);
-    }
   </script>
 </body>
 </html>
+     
+    
