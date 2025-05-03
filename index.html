@@ -668,7 +668,7 @@
         
         // Tabellendaten
         entries.forEach(e => {
-          const sollHours = e.sollHours ? e.sollHours : parseFloat(localStorage.getItem('workHours') || 8);
+          const sollHours = e.type === 'Arbeit' ? (e.sollHours ? e.sollHours : parseFloat(localStorage.getItem('workHours') || 8)) : '';
           data.push([
             formatDate(e.date),
             e.type === 'Arbeit' ? e.start || '-' : '-',
@@ -676,7 +676,7 @@
             e.type === 'Arbeit' ? e.pause || '0' : '-',
             e.type,
             e.hours || '0:00',
-            sollHours
+            sollHours === '' ? '' : `${Math.floor(sollHours)}:${String(Math.round((sollHours % 1) * 60)).padStart(2, '0')}`
           ]);
         });
 
