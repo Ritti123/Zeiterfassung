@@ -368,6 +368,7 @@
       let overtimeMinutes = 0;
       let vacation = 0;
       let sick = 0;
+      let holiday = 0;
 
       const selectedMonth = monthInput.value;
       const entries = timeEntries
@@ -393,6 +394,7 @@
           overtimeMinutes += istMin - sollMin;
         } else if (entry.type === 'Urlaub') vacation++;
         else if (entry.type === 'Krank') sick++;
+        else if (entry.type === 'Feiertag') holiday++;
 
         const sollHours = entry.sollHours ? entry.sollHours : parseFloat(localStorage.getItem('workHours') || 8);
         row.insertCell(6).textContent = entry.type === 'Arbeit' 
@@ -640,7 +642,7 @@
       download(`Monatsreport_${monthNames[parseInt(month)-1]}_${year}.csv`, csv, 'text/csv');
     }
 
-    // PDF Export (optimierte Version)
+    // PDF Export (korrigierte Version)
     function exportPDF() {
       const selectedMonth = monthInput.value;
       const [year, month] = selectedMonth.split("-");
@@ -655,7 +657,7 @@
 
       try {
         // PDF erstellen (Querformat)
-        const doc = new jspdf.jsPDF('landscape');
+        const doc = new window.jspdf.jsPDF('landscape');
         
         // Titel
         doc.setFontSize(18);
@@ -688,7 +690,7 @@
           ];
         });
 
-        // Tabelle einfügen (mit automatischer Seitenumbrüchen)
+        // Tabelle einfügen
         doc.autoTable({
           head: headers,
           body: data,
@@ -702,25 +704,8 @@
           headStyles: { 
             fillColor: [52, 152, 219],
             textColor: 255
-          },
-          columnStyles: {
-            0: { cellWidth: 25 },
-            1: { cellWidth: 20 },
-            2: { cellWidth: 20 },
-            3: { cellWidth: 15 },
-            4: { cellWidth: 20 },
-            5: { cellWidth: 15 },
-            6: { cellWidth: 15 },
-            7: { cellWidth: 20 }
           }
         });
-
-        // Statistiken hinzufügen
-        const finalY = doc.lastAutoTable.finalY + 10;
-        doc.setFontSize(12);
-        doc.text(`Überstunden: ${document.getElementById('overtime').textContent}`, 20, finalY);
-        doc.text(`Urlaubstage: ${document.getElementById('vacation-days').textContent}`, 20, finalY + 10);
-        doc.text(`Krankheitstage: ${document.getElementById('sick-days').textContent}`, 20, finalY + 20);
 
         // PDF speichern
         doc.save(`Monatsreport_${monthNames[parseInt(month)-1]}_${year}.pdf`);
@@ -834,12 +819,12 @@
     }
   </script>
   
-  <!-- JS-Bibliotheken -->
+  <!-- Korrigierte JS-Bibliotheken -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
   <script>
-    // jsPDF als globale Variable verfügbar machen
-    window.jspdf = window.jspdf.jsPDF;
+    // Korrekte Initialisierung für jsPDF
+    window.jspdf = window.jspdf || {};
   </script>
 </body>
 </html>
