@@ -127,8 +127,8 @@
     <h2>Zeiterfassung</h2>
 
     <div class="settings">
-      <label for="work-hours">Tägliche Sollstunden:</label>
-      <input type="number" id="work-hours" min="1" max="24" value="8">
+      <label for="default-work-hours">Standard Sollstunden:</label>
+      <input type="number" id="default-work-hours" min="1" max="24" value="8">
 
       <label for="vacation-days-year">Urlaubstage pro Jahr:</label>
       <input type="number" id="vacation-days-year" min="1" max="365" value="24">
@@ -137,6 +137,10 @@
     <div>
       <label for="date">Datum:</label>
       <input type="date" id="date">
+    </div>
+    <div>
+      <label for="work-hours">Sollstunden (heute):</label>
+      <input type="number" id="work-hours" min="1" max="24" value="8">
     </div>
     <div>
       <label for="start-time">Kommen:</label>
@@ -237,6 +241,7 @@
     const typeSelect = document.getElementById('type');
     const vacationRangeDiv = document.getElementById('vacation-range');
     const addVacationRangeBtn = document.getElementById('add-vacation-range-btn');
+    const defaultWorkHoursInput = document.getElementById('default-work-hours');
     const workHoursInput = document.getElementById('work-hours');
     const vacationDaysInput = document.getElementById('vacation-days-year');
 
@@ -246,7 +251,8 @@
       const now = new Date();
       document.getElementById('date').valueAsDate = now;
       monthInput.value = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-      workHoursInput.value = localStorage.getItem('workHours') || 8;
+      defaultWorkHoursInput.value = localStorage.getItem('defaultWorkHours') || 8;
+      workHoursInput.value = localStorage.getItem('defaultWorkHours') || 8;
       vacationDaysInput.value = localStorage.getItem('vacationDays') || 24;
       loadEntries();
       checkBackupReminder();
@@ -257,9 +263,13 @@
     });
 
     // Event Listener für Einstellungen
+    defaultWorkHoursInput.addEventListener('change', function() {
+      localStorage.setItem('defaultWorkHours', this.value);
+      workHoursInput.value = this.value;
+    });
+
     workHoursInput.addEventListener('change', function() {
-      localStorage.setItem('workHours', this.value);
-      loadEntries();
+      // Wird pro Eintrag gespeichert, kein localStorage nötig
     });
 
     vacationDaysInput.addEventListener('change', function() {
@@ -373,10 +383,11 @@
         .filter(e => e.date && e.date.startsWith(selectedMonth))
         .sort((a, b) => new Date(a.date) - new Date(b.date));
       
-      const workHoursPerDay = parseFloat(localStorage.getItem('workHours') || 8) * 60;
       const totalVacationDays = parseInt(localStorage.getItem('vacationDays') || 24);
 
       entries.forEach(entry => {
+        const workHoursPerDay = entry.workHours || parseFloat(localStorage.getItem('defaultWorkHours') || 8) * 60;
+        
         const row = tbody.insertRow();
         row.insertCell(0).textContent = formatDate(entry.date);
         row.insertCell(1).textContent = entry.type === 'Arbeit' ? entry.start || '-' : '-';
@@ -445,6 +456,7 @@
       const end = document.getElementById('end-time').value;
       const pause = parseInt(document.getElementById('break').value) || 0;
       const type = document.getElementById('type').value;
+      const workHours = parseFloat(document.getElementById('work-hours').value) || 8;
 
       if (!date) {
         alert('Bitte Datum ausfüllen.');
@@ -495,7 +507,8 @@
         date, 
         type,
         hours: '0:00',
-        pause: type === 'Arbeit' ? pause : 0
+        pause: type === 'Arbeit' ? pause : 0,
+        workHours: type === 'Arbeit' ? workHours : null
       };
 
       if (type === 'Arbeit') {
@@ -580,6 +593,7 @@
       document.getElementById('start-time').value = '';
       document.getElementById('end-time').value = '';
       document.getElementById('break').value = '30';
+      document.getElementById('work-hours').value = localStorage.getItem('defaultWorkHours') || 8;
       const nextDay = new Date(new Date(document.getElementById('date').value).getTime() + 86400000);
       document.getElementById('date').valueAsDate = new Date(nextDay);
       document.getElementById('vacation-end-date').value = '';
@@ -616,9 +630,14 @@
       const entries = timeEntries.filter(e => e.date && e.date.startsWith(selectedMonth));
       if (entries.length === 0) return alert('Keine Daten vorhanden.');
 
-      let csv = `Monatsreport ${monthNames[parseInt(month)-1]} ${year}\nDatum;Kommen;Gehen;Pause;Art;Stunden\n`;
+      let csv = `Monatsreport ${monthNames[parseInt(month)-1]} ${year}\nDatum;Kommen;Gehen;Pause;Art;Stunden;Soll;Differenz\n`;
       entries.forEach(e => {
-        csv += `${formatDate(e.date)};${e.type === 'Arbeit' ? e.start || '' : ''};${e.type === 'Arbeit' ? e.end || '' : ''};${e.type === 'Arbeit' ? e.pause : ''};${e.type};${e.hours || '0:00'}\n`;
+        const workHours = e.workHours || parseFloat(localStorage.getItem('defaultWorkHours') || 8);
+        const [h, m] = (e.hours || '0:00').split(':').map(Number);
+        const diff = (h * 60 + m) - (workHours * 60);
+        const diffFormatted = `${diff < 0 ? '-' : ''}${Math.floor(Math.abs(diff) / 60)}:${String(Math.abs(diff) % 60).padStart(2, '0')}`;
+        
+        csv += `${formatDate(e.date)};${e.type === 'Arbeit' ? e.start || '' : ''};${e.type === 'Arbeit' ? e.end || '' : ''};${e.type === 'Arbeit' ? e.pause : ''};${e.type};${e.hours || '0:00'};${workHours};${diffFormatted}\n`;
       });
 
       const overtime = document.getElementById('overtime').textContent;
@@ -645,16 +664,24 @@
       doc.text(`Monatsreport ${monthNames[parseInt(month)-1]} ${year}`, 105, 15, { align: 'center' });
       
       // Tabelle
-      const headers = [['Datum', 'Kommen', 'Gehen', 'Pause', 'Art', 'Stunden', 'Differenz']];
-      const data = entries.map(e => [
-        formatDate(e.date),
-        e.type === 'Arbeit' ? e.start || '-' : '-',
-        e.type === 'Arbeit' ? e.end || '-' : '-',
-        e.type === 'Arbeit' ? e.pause || '0' : '-',
-        e.type,
-        e.hours || '0:00',
-        e.type === 'Arbeit' ? e.hours || '0:00' : '-'
-      ]);
+      const headers = [['Datum', 'Kommen', 'Gehen', 'Pause', 'Art', 'Stunden', 'Soll', 'Differenz']];
+      const data = entries.map(e => {
+        const workHours = e.workHours || parseFloat(localStorage.getItem('defaultWorkHours') || 8);
+        const [h, m] = (e.hours || '0:00').split(':').map(Number);
+        const diff = (h * 60 + m) - (workHours * 60);
+        const diffFormatted = `${diff < 0 ? '-' : ''}${Math.floor(Math.abs(diff) / 60)}:${String(Math.abs(diff) % 60).padStart(2, '0')}`;
+        
+        return [
+          formatDate(e.date),
+          e.type === 'Arbeit' ? e.start || '-' : '-',
+          e.type === 'Arbeit' ? e.end || '-' : '-',
+          e.type === 'Arbeit' ? e.pause || '0' : '-',
+          e.type,
+          e.hours || '0:00',
+          workHours,
+          diffFormatted
+        ];
+      });
       
       doc.autoTable({
         head: headers,
@@ -682,7 +709,7 @@
       const data = { 
         entries: timeEntries, 
         settings: {
-          workHours: localStorage.getItem('workHours') || 8,
+          defaultWorkHours: localStorage.getItem('defaultWorkHours') || 8,
           vacationDays: localStorage.getItem('vacationDays') || 24
         },
         exported: new Date().toISOString() 
@@ -719,9 +746,10 @@
                 
                 // Einstellungen übernehmen
                 if (data.settings) {
-                  localStorage.setItem('workHours', data.settings.workHours);
+                  localStorage.setItem('defaultWorkHours', data.settings.defaultWorkHours);
                   localStorage.setItem('vacationDays', data.settings.vacationDays);
-                  document.getElementById('work-hours').value = data.settings.workHours;
+                  document.getElementById('default-work-hours').value = data.settings.defaultWorkHours;
+                  document.getElementById('work-hours').value = data.settings.defaultWorkHours;
                   document.getElementById('vacation-days-year').value = data.settings.vacationDays;
                 }
                 
@@ -734,9 +762,10 @@
               localStorage.setItem('timeEntries', JSON.stringify(timeEntries));
               
               if (data.settings) {
-                localStorage.setItem('workHours', data.settings.workHours);
+                localStorage.setItem('defaultWorkHours', data.settings.defaultWorkHours);
                 localStorage.setItem('vacationDays', data.settings.vacationDays);
-                document.getElementById('work-hours').value = data.settings.workHours;
+                document.getElementById('default-work-hours').value = data.settings.defaultWorkHours;
+                document.getElementById('work-hours').value = data.settings.defaultWorkHours;
                 document.getElementById('vacation-days-year').value = data.settings.vacationDays;
               }
               
