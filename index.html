@@ -361,7 +361,7 @@
       };
     }
 
-    // Einträge rendern (ÜBERARBEITETE FUNKTION)
+    // Einträge rendern
     function renderEntries() {
       tbody.innerHTML = '';
       let overtimeMinutes = 0;
@@ -373,12 +373,10 @@
         .filter(e => e.date && e.date.startsWith(selectedMonth))
         .sort((a, b) => new Date(a.date) - new Date(b.date));
       
+      const workHoursPerDay = parseFloat(localStorage.getItem('workHours') || 8) * 60;
       const totalVacationDays = parseInt(localStorage.getItem('vacationDays') || 24);
 
       entries.forEach(entry => {
-        // Verwendung der gespeicherten Sollstunden pro Eintrag oder Standardwert
-        const workHoursPerDay = (entry.workHours || parseFloat(localStorage.getItem('workHours') || 8)) * 60;
-        
         const row = tbody.insertRow();
         row.insertCell(0).textContent = formatDate(entry.date);
         row.insertCell(1).textContent = entry.type === 'Arbeit' ? entry.start || '-' : '-';
@@ -440,7 +438,7 @@
       };
     }
 
-    // Eintrag hinzufügen (ÜBERARBEITETE FUNKTION)
+    // Eintrag hinzufügen
     async function addTimeEntry() {
       const date = document.getElementById('date').value;
       const start = document.getElementById('start-time').value;
@@ -497,8 +495,7 @@
         date, 
         type,
         hours: '0:00',
-        pause: type === 'Arbeit' ? pause : 0,
-        workHours: parseFloat(workHoursInput.value) // Sollstunden mit speichern
+        pause: type === 'Arbeit' ? pause : 0
       };
 
       if (type === 'Arbeit') {
@@ -521,7 +518,7 @@
       }
     }
 
-    // Urlaubszeitraum hinzufügen (ÜBERARBEITETE FUNKTION)
+    // Urlaubszeitraum hinzufügen
     async function addVacationRange() {
       const startDate = document.getElementById('date').value;
       const endDate = document.getElementById('vacation-end-date').value;
@@ -543,7 +540,6 @@
 
       const currentDate = new Date(startDate);
       const end = new Date(endDate);
-      const currentWorkHours = parseFloat(workHoursInput.value); // Aktuelle Sollstunden speichern
 
       // Prüfen auf bestehende Einträge im Zeitraum
       const existingEntries = timeEntries.filter(e => {
@@ -563,12 +559,7 @@
 
       while (currentDate <= end) {
         const dateStr = currentDate.toISOString().split('T')[0];
-        const entry = { 
-          date: dateStr, 
-          type, 
-          hours: '0:00',
-          workHours: currentWorkHours // Sollstunden für Urlaubstage speichern
-        };
+        const entry = { date: dateStr, type, hours: '0:00' };
 
         try {
           await saveEntry(entry);
@@ -584,7 +575,7 @@
       vacationRangeDiv.style.display = 'none';
     }
 
-    // Restliche Funktionen bleiben unverändert
+    // Formular zurücksetzen
     function resetForm() {
       document.getElementById('start-time').value = '';
       document.getElementById('end-time').value = '';
@@ -594,6 +585,7 @@
       document.getElementById('vacation-end-date').value = '';
     }
 
+    // Statistik aktualisieren
     function updateStats(overtimeMinutes, vacation, totalVacationDays, sick) {
       const oh = Math.floor(Math.abs(overtimeMinutes) / 60);
       const om = Math.abs(overtimeMinutes) % 60;
@@ -607,6 +599,7 @@
       document.getElementById('sick-days').textContent = `${sick} Tage`;
     }
 
+    // Theme umschalten
     function toggleTheme() {
       const currentTheme = document.documentElement.getAttribute('data-theme') || 'light';
       const newTheme = currentTheme === 'light' ? 'dark' : 'light';
@@ -614,6 +607,7 @@
       localStorage.setItem('theme', newTheme);
     }
 
+    // CSV Export
     function exportCSV() {
       const selectedMonth = monthInput.value;
       const [year, month] = selectedMonth.split("-");
@@ -622,10 +616,9 @@
       const entries = timeEntries.filter(e => e.date && e.date.startsWith(selectedMonth));
       if (entries.length === 0) return alert('Keine Daten vorhanden.');
 
-      let csv = `Monatsreport ${monthNames[parseInt(month)-1]} ${year}\nDatum;Kommen;Gehen;Pause;Art;Stunden;Sollstunden\n`;
+      let csv = `Monatsreport ${monthNames[parseInt(month)-1]} ${year}\nDatum;Kommen;Gehen;Pause;Art;Stunden\n`;
       entries.forEach(e => {
-        const workHours = e.workHours || parseFloat(localStorage.getItem('workHours') || 8;
-        csv += `${formatDate(e.date)};${e.type === 'Arbeit' ? e.start || '' : ''};${e.type === 'Arbeit' ? e.end || '' : ''};${e.type === 'Arbeit' ? e.pause : ''};${e.type};${e.hours || '0:00'};${workHours}\n`;
+        csv += `${formatDate(e.date)};${e.type === 'Arbeit' ? e.start || '' : ''};${e.type === 'Arbeit' ? e.end || '' : ''};${e.type === 'Arbeit' ? e.pause : ''};${e.type};${e.hours || '0:00'}\n`;
       });
 
       const overtime = document.getElementById('overtime').textContent;
@@ -636,6 +629,7 @@
       download(`Monatsreport_${monthNames[parseInt(month)-1]}_${year}.csv`, csv, 'text/csv');
     }
 
+    // PDF Export
     function exportPDF() {
       const selectedMonth = monthInput.value;
       const [year, month] = selectedMonth.split("-");
@@ -651,35 +645,16 @@
       doc.text(`Monatsreport ${monthNames[parseInt(month)-1]} ${year}`, 105, 15, { align: 'center' });
       
       // Tabelle
-      const headers = [['Datum', 'Kommen', 'Gehen', 'Pause', 'Art', 'Stunden', 'Soll', 'Differenz']];
-      const data = entries.map(e => {
-        const workHours = e.workHours || parseFloat(localStorage.getItem('workHours') || 8);
-        const workHoursStr = `${Math.floor(workHours)}:${String(Math.round((workHours % 1) * 60).padStart(2, '0')}`;
-        
-        let hours = '0:00';
-        let diff = '0:00';
-        if (e.type === 'Arbeit') {
-          const [h, m] = (e.hours || '0:00').split(":").map(Number);
-          const totalMinutes = h * 60 + m;
-          const sollMinutes = workHours * 60;
-          const diffMinutes = totalMinutes - sollMinutes;
-          const diffH = Math.floor(Math.abs(diffMinutes) / 60);
-          const diffM = Math.abs(diffMinutes) % 60;
-          diff = `${diffMinutes < 0 ? '-' : ''}${diffH}:${String(diffM).padStart(2, '0')}`;
-          hours = e.hours || '0:00';
-        }
-        
-        return [
-          formatDate(e.date),
-          e.type === 'Arbeit' ? e.start || '-' : '-',
-          e.type === 'Arbeit' ? e.end || '-' : '-',
-          e.type === 'Arbeit' ? e.pause || '0' : '-',
-          e.type,
-          hours,
-          e.type === 'Arbeit' ? workHoursStr : '-',
-          e.type === 'Arbeit' ? diff : '-'
-        ];
-      });
+      const headers = [['Datum', 'Kommen', 'Gehen', 'Pause', 'Art', 'Stunden', 'Differenz']];
+      const data = entries.map(e => [
+        formatDate(e.date),
+        e.type === 'Arbeit' ? e.start || '-' : '-',
+        e.type === 'Arbeit' ? e.end || '-' : '-',
+        e.type === 'Arbeit' ? e.pause || '0' : '-',
+        e.type,
+        e.hours || '0:00',
+        e.type === 'Arbeit' ? e.hours || '0:00' : '-'
+      ]);
       
       doc.autoTable({
         head: headers,
@@ -702,6 +677,7 @@
       doc.save(`Monatsreport_${monthNames[parseInt(month)-1]}_${year}.pdf`);
     }
 
+    // Backup exportieren
     function exportBackup() {
       const data = { 
         entries: timeEntries, 
@@ -718,6 +694,7 @@
       download(`backup_zeiterfassung_${now}.json`, JSON.stringify(data, null, 2), 'application/json');
     }
 
+    // Backup importieren
     function handleImport(e) {
       const file = e.target.files[0];
       if (!file) return;
