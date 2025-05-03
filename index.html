@@ -12,9 +12,7 @@
       padding: 20px;
       background: #f4f6f8;
     }
-    h2, h3, h4 {
-      margin-top: 0;
-    }
+    h2, h3, h4 { margin-top: 0; }
     .section {
       background: #fff;
       border: 1px solid #ddd;
@@ -32,9 +30,7 @@
       border-radius: 6px;
       font-size: 16px;
     }
-    input::placeholder {
-      color: #aaa;
-    }
+    input::placeholder { color: #aaa; }
     button {
       background-color: #3498db;
       color: white;
@@ -42,12 +38,8 @@
       cursor: pointer;
       font-weight: bold;
     }
-    button.delete {
-      background-color: #e74c3c;
-    }
-    button.secondary {
-      background-color: #2ecc71;
-    }
+    button.delete { background-color: #e74c3c; }
+    button.secondary { background-color: #2ecc71; }
     table {
       width: 100%;
       border-collapse: collapse;
@@ -59,9 +51,7 @@
       padding: 8px;
       text-align: center;
     }
-    th {
-      background-color: #f0f0f0;
-    }
+    th { background-color: #f0f0f0; }
     .stats {
       display: flex;
       flex-wrap: wrap;
@@ -76,9 +66,7 @@
       border-radius: 5px;
       background-color: white;
     }
-    .settings {
-      margin-top: 20px;
-    }
+    .settings { margin-top: 20px; }
   </style>
 </head>
 <body>
@@ -135,6 +123,8 @@
           <th>Pause</th>
           <th>Art</th>
           <th>Stunden</th>
+          <th>Soll</th>
+          <th>Differenz</th>
           <th>Aktion</th>
         </tr>
       </thead>
@@ -226,6 +216,12 @@
         hours = `${h}:${m.toString().padStart(2, '0')}`;
       }
 
+      const existing = timeEntries.find(e => e.date === date);
+      if (existing) {
+        if (!confirm("Für dieses Datum existiert bereits ein Eintrag. Überschreiben?")) return;
+        timeEntries = timeEntries.filter(e => e.date !== date);
+      }
+
       timeEntries.push({ date, start, end, pause, type, hours });
       localStorage.setItem('timeEntries', JSON.stringify(timeEntries));
       loadEntries();
@@ -256,14 +252,20 @@
         row.insertCell(4).textContent = entry.type;
         row.insertCell(5).textContent = entry.hours;
 
+        let istMin = 0;
         if (entry.type === 'Arbeit') {
           const [h, m] = entry.hours.split(":").map(Number);
-          overtimeMinutes += h * 60 + m - workHoursPerDay;
-        } else if (entry.type === 'Urlaub') {
-          vacation++;
-        } else if (entry.type === 'Krank') {
-          sick++;
-        }
+          istMin = h * 60 + m;
+          overtimeMinutes += istMin - workHoursPerDay;
+        } else if (entry.type === 'Urlaub') vacation++;
+        else if (entry.type === 'Krank') sick++;
+
+        row.insertCell(6).textContent = entry.type === 'Arbeit' ? `${Math.floor(workHoursPerDay / 60)}:${String(workHoursPerDay % 60).padStart(2, '0')}` : '-';
+
+        let diff = istMin - workHoursPerDay;
+        row.insertCell(7).textContent = entry.type === 'Arbeit'
+          ? `${diff < 0 ? '-' : ''}${Math.floor(Math.abs(diff) / 60)}:${String(Math.abs(diff) % 60).padStart(2, '0')}`
+          : '-';
 
         const deleteBtn = document.createElement('button');
         deleteBtn.textContent = 'Löschen';
@@ -273,13 +275,13 @@
           localStorage.setItem('timeEntries', JSON.stringify(timeEntries));
           loadEntries();
         };
-        row.insertCell(6).appendChild(deleteBtn);
+        row.insertCell(8).appendChild(deleteBtn);
       });
 
       const oh = Math.floor(Math.abs(overtimeMinutes) / 60);
       const om = Math.abs(overtimeMinutes) % 60;
       const sign = overtimeMinutes < 0 ? "-" : "";
-      document.getElementById('overtime').textContent = `${sign}${oh}:${om.toString().padStart(2, '0')}`;
+      document.getElementById('overtime').textContent = `${sign}${oh}:${String(om).padStart(2, '0')}`;
       document.getElementById('vacation-days').textContent = `${vacation} Tage`;
       document.getElementById('sick-days').textContent = `${sick} Tage`;
     }
@@ -310,12 +312,9 @@
 
     function exportBackup() {
       const data = { entries: timeEntries, exported: new Date().toISOString() };
-
       const now = new Date().getTime();
       backupTimestamps.push(now);
-      while (backupTimestamps.length > 2) {
-        backupTimestamps.shift();
-      }
+      while (backupTimestamps.length > 2) backupTimestamps.shift();
       localStorage.setItem('backupTimestamps', JSON.stringify(backupTimestamps));
       download(`backup_zeiterfassung_${now}.json`, JSON.stringify(data, null, 2), 'application/json');
     }
@@ -332,7 +331,6 @@
     function handleImport(e) {
       const file = e.target.files[0];
       if (!file) return;
-
       const reader = new FileReader();
       reader.onload = function (event) {
         try {
@@ -362,3 +360,9 @@
   </script>
 </body>
 </html>
+      
+
+
+
+
+
