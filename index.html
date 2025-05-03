@@ -3,7 +3,12 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#3498db">
   <title>Zeiterfassung</title>
+  <link rel="manifest" href="/manifest.json">
+  <link rel="apple-touch-icon" href="icons/icon-192x192.png">
   <style>
     :root {
       --bg-color: #f4f6f8;
@@ -39,6 +44,7 @@
       background: var(--bg-color);
       color: var(--text-color);
       transition: all 0.3s ease;
+      -webkit-tap-highlight-color: transparent;
     }
     h2, h3, h4 { margin-top: 0; }
     .section {
@@ -67,6 +73,7 @@
       border: none;
       cursor: pointer;
       font-weight: bold;
+      -webkit-appearance: none;
     }
     button.delete { background-color: var(--button-danger); }
     button.secondary { background-color: var(--button-success); }
@@ -113,15 +120,38 @@
       justify-content: center;
       z-index: 100;
     }
+    .install-btn {
+      position: fixed;
+      top: 60px;
+      right: 10px;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: var(--button-success);
+      color: white;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      display: none;
+    }
     @media (max-width: 600px) {
       .stat-box { min-width: 100%; }
       table { font-size: 14px; }
       th, td { padding: 5px; }
     }
+    @media (display-mode: standalone) {
+      body {
+        padding-top: 20px;
+      }
+    }
   </style>
 </head>
 <body>
   <button class="theme-toggle" id="theme-toggle">🌓</button>
+  <button class="install-btn" id="install-btn">📲</button>
   
   <div class="section">
     <h2>Zeiterfassung</h2>
@@ -217,11 +247,12 @@
   <script>
     // IndexedDB für bessere Performance
     const DB_NAME = 'TimeTrackingDB';
-    const DB_VERSION = 1;
+    const DB_VERSION = 2; // Version erhöht für PWA
     const STORE_NAME = 'timeEntries';
     let db;
     let timeEntries = [];
     let backupTimestamps = JSON.parse(localStorage.getItem('backupTimestamps') || '[]');
+    let deferredPrompt;
 
     // DOM-Elemente
     const addEntryBtn = document.getElementById('add-entry-btn');
@@ -239,6 +270,7 @@
     const addTimeRangeBtn = document.getElementById('add-time-range-btn');
     const workHoursInput = document.getElementById('work-hours');
     const vacationDaysInput = document.getElementById('vacation-days-year');
+    const installBtn = document.getElementById('install-btn');
 
     // Initialisierung
     document.addEventListener('DOMContentLoaded', async () => {
@@ -254,6 +286,38 @@
       // Theme aus localStorage laden
       const savedTheme = localStorage.getItem('theme') || 'light';
       document.documentElement.setAttribute('data-theme', savedTheme);
+
+      // Install Button anzeigen, wenn PWA installierbar
+      window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        deferredPrompt = e;
+        installBtn.style.display = 'flex';
+      });
+
+      installBtn.addEventListener('click', async () => {
+        if (!deferredPrompt) return;
+        deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        if (outcome === 'accepted') {
+          installBtn.style.display = 'none';
+        }
+        deferredPrompt = null;
+      });
+
+      // Prüfen ob im Standalone-Modus (installierte PWA)
+      if (window.matchMedia('(display-mode: standalone)').matches) {
+        console.log('Running as PWA');
+      }
+
+      // Service Worker registrieren
+      if ('serviceWorker' in navigator) {
+        try {
+          await navigator.serviceWorker.register('sw.js');
+          console.log('Service Worker registriert');
+        } catch (error) {
+          console.error('Service Worker Registrierung fehlgeschlagen:', error);
+        }
+      }
     });
 
     // Event Listener für Einstellungen
