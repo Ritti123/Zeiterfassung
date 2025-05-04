@@ -178,7 +178,7 @@
     </div>
     <div>
       <label for="break">Pause (Minuten):</label>
-      <input type="number" id="break" placeholder="z. B. 30" min="0" max="240">
+      <input type="number" id="break" value="30" placeholder="z. B. 30" min="0" max="240">
     </div>
     <div>
       <label for="type">Art:</label>
@@ -247,8 +247,9 @@
   <script>
     // IndexedDB für bessere Performance
     const DB_NAME = 'TimeTrackingDB';
-    const DB_VERSION = 2;
+    const DB_VERSION = 3; // Version erhöht für Urlaubsdaten
     const STORE_NAME = 'timeEntries';
+    const SETTINGS_STORE = 'settings';
     let db;
     let timeEntries = [];
     let backupTimestamps = JSON.parse(localStorage.getItem('backupTimestamps') || '[]');
@@ -315,33 +316,7 @@
       }
     });
 
-    // Event Listener für Einstellungen
-    workHoursInput.addEventListener('change', function() {
-      localStorage.setItem('workHours', this.value);
-      loadEntries();
-    });
-
-    vacationDaysInput.addEventListener('change', function() {
-      localStorage.setItem('vacationDays', this.value);
-      loadEntries();
-    });
-
-    // Event Listener
-    addEntryBtn.addEventListener('click', addTimeEntry);
-    exportCsvBtn.addEventListener('click', exportCSV);
-    exportPdfBtn.addEventListener('click', exportPDF);
-    exportBackupBtn.addEventListener('click', exportBackup);
-    importBackupBtn.addEventListener('click', () => importFile.click());
-    importFile.addEventListener('change', handleImport);
-    monthInput.addEventListener('change', loadEntries);
-    themeToggle.addEventListener('click', toggleTheme);
-    typeSelect.addEventListener('change', (e) => {
-      const showRange = ['Urlaub', 'Krank', 'Feiertag'].includes(e.target.value);
-      timeRangeDiv.style.display = showRange ? 'block' : 'none';
-    });
-    addTimeRangeBtn.addEventListener('click', addTimeRange);
-
-    // IndexedDB Initialisierung
+    // IndexedDB Initialisierung mit Settings-Store
     function initDB() {
       return new Promise((resolve, reject) => {
         const request = indexedDB.open(DB_NAME, DB_VERSION);
@@ -351,10 +326,17 @@
           if (!db.objectStoreNames.contains(STORE_NAME)) {
             db.createObjectStore(STORE_NAME, { keyPath: 'id', autoIncrement: true });
           }
+          if (!db.objectStoreNames.contains(SETTINGS_STORE)) {
+            const store = db.createObjectStore(SETTINGS_STORE, { keyPath: 'name' });
+            // Initialwerte setzen
+            store.put({ name: 'overtime', value: 0 });
+            store.put({ name: 'vacation', value: [] });
+          }
         };
         
         request.onsuccess = (event) => {
           db = event.target.result;
+          migrateLocalStorageData();
           resolve();
         };
         
@@ -363,6 +345,64 @@
           timeEntries = JSON.parse(localStorage.getItem('timeEntries') || '[]');
           resolve();
         };
+      });
+    }
+
+    // Migriere localStorage Daten zu IndexedDB
+    function migrateLocalStorageData() {
+      if (!db) return;
+      
+      const transaction = db.transaction([SETTINGS_STORE], 'readwrite');
+      const store = transaction.objectStore(SETTINGS_STORE);
+      
+      // Überstunden migrieren
+      const overtime = parseInt(localStorage.getItem('totalOvertime')) || 0;
+      store.put({ name: 'overtime', value: overtime });
+      
+      // Urlaubstage migrieren
+      const vacationData = localStorage.getItem('vacationData');
+      if (vacationData) {
+        store.put({ name: 'vacation', value: JSON.parse(vacationData) });
+      }
+      
+      localStorage.removeItem('totalOvertime');
+      localStorage.removeItem('vacationData');
+    }
+
+    // Einstellung speichern
+    async function saveSetting(name, value) {
+      return new Promise((resolve) => {
+        if (!db) {
+          localStorage.setItem(name, value);
+          resolve();
+          return;
+        }
+        
+        const transaction = db.transaction([SETTINGS_STORE], 'readwrite');
+        const store = transaction.objectStore(SETTINGS_STORE);
+        store.put({ name, value });
+        resolve();
+      });
+    }
+
+    // Einstellung laden
+    async function getSetting(name, defaultValue) {
+      return new Promise((resolve) => {
+        if (!db) {
+          const value = localStorage.getItem(name);
+          resolve(value !== null ? value : defaultValue);
+          return;
+        }
+        
+        const transaction = db.transaction([SETTINGS_STORE], 'readonly');
+        const store = transaction.objectStore(SETTINGS_STORE);
+        const request = store.get(name);
+        
+        request.onsuccess = () => {
+          resolve(request.result ? request.result.value : defaultValue);
+        };
+        
+        request.onerror = () => resolve(defaultValue);
       });
     }
 
@@ -421,50 +461,33 @@
       };
     }
 
-    // Einträge rendern
-    function renderEntries() {
+    // Einträge rendern mit neuer Urlaubs- und Überstundenlogik
+    async function renderEntries() {
       tbody.innerHTML = '';
+      let monthlyOvertimeMinutes = 0;
+      let sick = 0;
+
       const selectedMonth = monthInput.value;
-      const [currentYear] = selectedMonth.split("-");
       const entries = timeEntries
         .filter(e => e.date && e.date.startsWith(selectedMonth))
         .sort((a, b) => new Date(a.date) - new Date(b.date));
 
-      // Berechne kumulative Statistiken
-      let totalOvertimeMinutes = 0;
-      let currentYearVacation = 0;
-      let previousYearVacation = 0;
-      let currentYearSick = 0;
-      const totalVacationDays = parseInt(localStorage.getItem('vacationDays') || 24);
+      // Lade kumulative Überstunden
+      const totalOvertimeMinutes = parseInt(await getSetting('overtime', 0));
+      
+      // Lade Urlaubsdaten
+      const vacationData = JSON.parse(await getSetting('vacation', '[]'));
+      const currentYear = new Date().getFullYear();
+      let vacationCurrentYear = 0;
+      let vacationPreviousYear = 0;
 
-      // Berechne Gesamtstatistiken
-      timeEntries.forEach(entry => {
-        const entryYear = entry.date.split("-")[0];
-        
-        if (entry.type === 'Arbeit') {
-          const [h, m] = (entry.hours || '0:00').split(":").map(Number);
-          const istMin = h * 60 + m;
-          const sollMin = entry.sollHours ? entry.sollHours * 60 : parseFloat(localStorage.getItem('workHours') || 8) * 60;
-          totalOvertimeMinutes += istMin - sollMin;
-        } 
-        else if (entry.type === 'Urlaub') {
-          if (entryYear === currentYear) {
-            currentYearVacation++;
-          } else if (entryYear < currentYear) {
-            previousYearVacation++;
-          }
-        }
-        else if (entry.type === 'Krank' && entryYear === currentYear) {
-          currentYearSick++;
-        }
+      // Zähle Urlaubstage
+      vacationData.forEach(entry => {
+        const entryYear = new Date(entry.date).getFullYear();
+        if (entryYear === currentYear) vacationCurrentYear++;
+        else if (entryYear === currentYear - 1) vacationPreviousYear++;
       });
 
-      // Resturlaub vom Vorjahr berechnen
-      const remainingPreviousVacation = Math.max(0, previousYearVacation - (totalVacationDays * (currentYear - 1 - entryYear)));
-      const remainingCurrentVacation = totalVacationDays - currentYearVacation;
-      const totalRemainingVacation = remainingPreviousVacation + remainingCurrentVacation;
-
-      // Tabelleneinträge erstellen
       entries.forEach(entry => {
         const row = tbody.insertRow();
         row.insertCell(0).textContent = formatDate(entry.date);
@@ -474,16 +497,20 @@
         row.insertCell(4).textContent = entry.type;
         row.insertCell(5).textContent = entry.hours || '0:00';
 
+        let istMin = 0;
+        if (entry.type === 'Arbeit') {
+          const [h, m] = (entry.hours || '0:00').split(":").map(Number);
+          istMin = h * 60 + m;
+          const sollMin = entry.sollHours ? entry.sollHours * 60 : parseFloat(localStorage.getItem('workHours') || 8) * 60;
+          monthlyOvertimeMinutes += istMin - sollMin;
+        } else if (entry.type === 'Krank') sick++;
+
         const sollHours = entry.sollHours ? entry.sollHours : parseFloat(localStorage.getItem('workHours') || 8);
         row.insertCell(6).textContent = entry.type === 'Arbeit' 
           ? `${Math.floor(sollHours)}:${String(Math.round((sollHours % 1) * 60)).padStart(2, '0')}`
           : '-';
 
-        let diff = 0;
-        if (entry.type === 'Arbeit') {
-          const [h, m] = (entry.hours || '0:00').split(":").map(Number);
-          diff = (h * 60 + m) - (sollHours * 60);
-        }
+        let diff = istMin - (sollHours * 60);
         row.insertCell(7).textContent = entry.type === 'Arbeit'
           ? `${diff < 0 ? '-' : ''}${Math.floor(Math.abs(diff) / 60)}:${String(Math.abs(diff) % 60).padStart(2, '0')}`
           : '-';
@@ -495,27 +522,33 @@
         row.insertCell(8).appendChild(deleteBtn);
       });
 
+      // Aktualisiere Gesamtüberstunden
+      const newTotalOvertime = totalOvertimeMinutes + monthlyOvertimeMinutes;
+      await saveSetting('overtime', newTotalOvertime);
+
       // Statistik aktualisieren
-      updateStats(totalOvertimeMinutes, currentYearVacation, remainingPreviousVacation, totalVacationDays, currentYearSick);
+      updateStats(newTotalOvertime, vacationCurrentYear, vacationPreviousYear, parseInt(localStorage.getItem('vacationDays') || 24), sick);
     }
+
     // Statistik aktualisieren
-    function updateStats(totalOvertimeMinutes, currentYearVacation, remainingPreviousVacation, totalVacationDays, sickDays) {
+    function updateStats(totalOvertimeMinutes, vacationCurrent, vacationPrevious, totalVacationDays, sick) {
       // Überstunden formatieren
-      const oh = Math.floor(Math.abs(totalOvertimeMinutes) / 60);
-      const om = Math.abs(totalOvertimeMinutes) % 60;
       const sign = totalOvertimeMinutes < 0 ? "-" : "";
-      document.getElementById('overtime').textContent = `${sign}${oh}:${String(om).padStart(2, '0')}`;
+      const absMin = Math.abs(totalOvertimeMinutes);
+      const hours = Math.floor(absMin / 60);
+      const mins = absMin % 60;
+      document.getElementById('overtime').textContent = `${sign}${hours}:${String(mins).padStart(2, '0')}`;
       
-      // Urlaubsstatistik
-      let vacationText = `${currentYearVacation} Tage verbraucht`;
-      if (remainingPreviousVacation > 0) {
-        vacationText += ` (${remainingPreviousVacation} Tage Resturlaub vom Vorjahr)`;
+      // Urlaubsberechnung
+      const remaining = totalVacationDays - vacationCurrent;
+      let vacationText = `${vacationCurrent} Tage verbraucht (${totalVacationDays} Jahresanspruch)`;
+      
+      if (vacationPrevious > 0) {
+        vacationText += ` + ${vacationPrevious} Resttage`;
       }
-      vacationText += `\nNoch ${totalVacationDays - currentYearVacation} von ${totalVacationDays} Tagen verfügbar`;
-      document.getElementById('vacation-days').textContent = vacationText;
       
-      // Krankheitstage
-      document.getElementById('sick-days').textContent = `${sickDays} Tage`;
+      document.getElementById('vacation-days').textContent = vacationText;
+      document.getElementById('sick-days').textContent = `${sick} Tage`;
     }
 
     // Eintrag löschen
@@ -614,6 +647,9 @@
         entry.hours = `${h}:${m.toString().padStart(2, '0')}`;
         entry.start = start;
         entry.end = end;
+      } else if (type === 'Urlaub') {
+        // Urlaubstag speichern
+        await saveVacationDay(date);
       }
 
       try {
@@ -625,13 +661,22 @@
       }
     }
 
-    // Zeitraum hinzufügen
+    // Urlaubstag speichern
+    async function saveVacationDay(date) {
+      const vacationData = JSON.parse(await getSetting('vacation', '[]'));
+      
+      // Prüfe ob der Tag bereits existiert
+      if (!vacationData.some(e => e.date === date)) {
+        vacationData.push({ date });
+        await saveSetting('vacation', JSON.stringify(vacationData));
+      }
+    }
+
+    // Zeitraum hinzufügen (für Urlaub/Krank/Feiertag)
     async function addTimeRange() {
       const startDate = document.getElementById('date').value;
       const endDate = document.getElementById('end-date').value;
       const type = document.getElementById('type').value;
-      const currentYear = new Date().getFullYear();
-      const totalVacationDays = parseInt(localStorage.getItem('vacationDays') || 24);
 
       if (!startDate || !endDate) {
         alert('Bitte Start- und Enddatum ausfüllen.');
@@ -641,16 +686,6 @@
       if (new Date(endDate) < new Date(startDate)) {
         alert('Enddatum muss nach Startdatum liegen.');
         return;
-      }
-
-      if (type === 'Urlaub') {
-        const daysToAdd = Math.floor((new Date(endDate) - new Date(startDate)) / (1000 * 60 * 60 * 24)) + 1;
-        const remainingVacation = getRemainingVacationDays();
-        
-        if (daysToAdd > remainingVacation) {
-          alert(`Nicht genug Urlaubstage verfügbar! (Verfügbar: ${remainingVacation} Tage)`);
-          return;
-        }
       }
 
       if (!confirm(`${type}-Zeitraum vom ${formatDate(startDate)} bis ${formatDate(endDate)} hinzufügen?`)) {
@@ -686,6 +721,9 @@
 
         try {
           await saveEntry(entry);
+          if (type === 'Urlaub') {
+            await saveVacationDay(dateStr);
+          }
         } catch (error) {
           console.error('Error saving entry:', error);
         }
@@ -698,41 +736,16 @@
       timeRangeDiv.style.display = 'none';
     }
 
-    // Verfügbare Urlaubstage berechnen
-    function getRemainingVacationDays() {
-      const currentYear = new Date().getFullYear();
-      let currentYearUsed = 0;
-      let previousYearRemaining = 0;
-      const totalVacationDays = parseInt(localStorage.getItem('vacationDays') || 24);
-
-      timeEntries.forEach(entry => {
-        const entryYear = parseInt(entry.date.split("-")[0]);
-        if (entry.type === 'Urlaub') {
-          if (entryYear === currentYear) {
-            currentYearUsed++;
-          } else if (entryYear < currentYear) {
-            previousYearRemaining++;
-          }
-        }
-      });
-
-      // Resturlaub vom Vorjahr berechnen (maximal die Jahresurlaubstage)
-      previousYearRemaining = Math.max(0, Math.min(totalVacationDays, previousYearRemaining - (currentYear - 1 - entryYear) * totalVacationDays));
-      
-      return (totalVacationDays - currentYearUsed) + previousYearRemaining;
-    }
-
-    // Formular zurücksetzen
+    // Restliche Funktionen bleiben unverändert
     function resetForm() {
       document.getElementById('start-time').value = '';
       document.getElementById('end-time').value = '';
-      document.getElementById('break').value = '';
+      document.getElementById('break').value = '30';
       const nextDay = new Date(new Date(document.getElementById('date').value).getTime() + 86400000);
       document.getElementById('date').valueAsDate = new Date(nextDay);
       document.getElementById('end-date').value = '';
     }
 
-    // Theme umschalten
     function toggleTheme() {
       const currentTheme = document.documentElement.getAttribute('data-theme') || 'light';
       const newTheme = currentTheme === 'light' ? 'dark' : 'light';
@@ -740,7 +753,6 @@
       localStorage.setItem('theme', newTheme);
     }
 
-    // CSV Export
     function exportCSV() {
       const selectedMonth = monthInput.value;
       const [year, month] = selectedMonth.split("-");
@@ -778,7 +790,6 @@
       download(`Monatsreport_${monthNames[parseInt(month)-1]}_${year}.csv`, csv, 'text/csv');
     }
 
-    // PDF Export
     function exportPDF() {
       const selectedMonth = monthInput.value;
       const [year, month] = selectedMonth.split("-");
@@ -864,8 +875,7 @@
       }
     }
 
-    // Backup exportieren
-    function exportBackup() {
+        function exportBackup() {
       const data = { 
         entries: timeEntries, 
         settings: {
@@ -893,15 +903,18 @@
           
           if (confirm(`${data.entries.length} Einträge importieren? Vorherige Daten werden überschrieben.`)) {
             if (db) {
+              // IndexedDB leeren
               const transaction = db.transaction([STORE_NAME], 'readwrite');
               const store = transaction.objectStore(STORE_NAME);
               const clearRequest = store.clear();
               
               clearRequest.onsuccess = async () => {
+                // Neue Einträge hinzufügen
                 for (const entry of data.entries) {
                   await saveEntry(entry);
                 }
                 
+                // Einstellungen übernehmen
                 if (data.settings) {
                   localStorage.setItem('workHours', data.settings.workHours);
                   localStorage.setItem('vacationDays', data.settings.vacationDays);
@@ -913,6 +926,7 @@
                 alert('Import erfolgreich.');
               };
             } else {
+              // Fallback zu localStorage
               timeEntries = data.entries;
               localStorage.setItem('timeEntries', JSON.stringify(timeEntries));
               
@@ -972,4 +986,3 @@
   </script>
 </body>
 </html>
-    
