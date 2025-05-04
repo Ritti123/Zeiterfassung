@@ -178,7 +178,7 @@
     </div>
     <div>
       <label for="break">Pause (Minuten):</label>
-      <input type="number" id="break" value="30" placeholder="z. B. 30" min="0" max="240">
+      <input type="number" id="break" placeholder="z. B. 30" min="0" max="240">
     </div>
     <div>
       <label for="type">Art:</label>
@@ -247,7 +247,7 @@
   <script>
     // IndexedDB für bessere Performance
     const DB_NAME = 'TimeTrackingDB';
-    const DB_VERSION = 2; // Version erhöht für PWA
+    const DB_VERSION = 2;
     const STORE_NAME = 'timeEntries';
     let db;
     let timeEntries = [];
@@ -303,11 +303,6 @@
         }
         deferredPrompt = null;
       });
-
-      // Prüfen ob im Standalone-Modus (installierte PWA)
-      if (window.matchMedia('(display-mode: standalone)').matches) {
-        console.log('Running as PWA');
-      }
 
       // Service Worker registrieren
       if ('serviceWorker' in navigator) {
@@ -365,7 +360,6 @@
         
         request.onerror = (event) => {
           console.error('IndexedDB error:', event.target.error);
-          // Fallback zu localStorage
           timeEntries = JSON.parse(localStorage.getItem('timeEntries') || '[]');
           resolve();
         };
@@ -376,7 +370,6 @@
     function saveEntry(entry) {
       return new Promise((resolve, reject) => {
         if (!db) {
-          // Fallback zu localStorage
           timeEntries.push(entry);
           localStorage.setItem('timeEntries', JSON.stringify(timeEntries));
           resolve();
@@ -404,9 +397,7 @@
       reportTitle.textContent = `Monatsreport ${monthNames[parseInt(month)-1]} ${year}`;
 
       if (!db) {
-        // Fallback zu localStorage
         timeEntries = JSON.parse(localStorage.getItem('timeEntries') || '[]');
-        // Einträge nach Datum sortieren
         timeEntries.sort((a, b) => new Date(a.date) - new Date(b.date));
         renderEntries();
         return;
@@ -418,7 +409,6 @@
 
       request.onsuccess = (event) => {
         timeEntries = event.target.result || [];
-        // Einträge nach Datum sortieren
         timeEntries.sort((a, b) => new Date(a.date) - new Date(b.date));
         renderEntries();
       };
@@ -426,7 +416,6 @@
       request.onerror = (event) => {
         console.error('Error loading entries:', event.target.error);
         timeEntries = JSON.parse(localStorage.getItem('timeEntries') || '[]');
-        // Einträge nach Datum sortieren
         timeEntries.sort((a, b) => new Date(a.date) - new Date(b.date));
         renderEntries();
       };
@@ -435,18 +424,53 @@
     // Einträge rendern
     function renderEntries() {
       tbody.innerHTML = '';
-      let overtimeMinutes = 0;
-      let vacation = 0;
-      let sick = 0;
-      let holiday = 0;
-
+      let monthlyOvertimeMinutes = 0;
+      
       const selectedMonth = monthInput.value;
+      const [currentYear] = selectedMonth.split("-");
       const entries = timeEntries
         .filter(e => e.date && e.date.startsWith(selectedMonth))
         .sort((a, b) => new Date(a.date) - new Date(b.date));
-      
+
+      // Berechne kumulative Überstunden und Urlaub
+      let totalOvertimeMinutes = 0;
+      let currentYearVacation = 0;
+      let previousYearVacation = 0;
+      let currentYearSick = 0;
       const totalVacationDays = parseInt(localStorage.getItem('vacationDays') || 24);
 
+      timeEntries.forEach(entry => {
+        const entryYear = entry.date.split("-")[0];
+        
+        if (entry.type === 'Arbeit') {
+          const [h, m] = (entry.hours || '0:00').split(":").map(Number);
+          const istMin = h * 60 + m;
+          const sollMin = entry.sollHours ? entry.sollHours * 60 : parseFloat(localStorage.getItem('workHours') || 8) * 60;
+          totalOvertimeMinutes += istMin - sollMin;
+          
+          // Monatliche Differenz für aktuellen Monat
+          if (entry.date.startsWith(selectedMonth)) {
+            monthlyOvertimeMinutes += istMin - sollMin;
+          }
+        } 
+        else if (entry.type === 'Urlaub') {
+          if (entryYear === currentYear) {
+            currentYearVacation++;
+          } else if (entryYear < currentYear) {
+            previousYearVacation++;
+          }
+        }
+        else if (entry.type === 'Krank' && entryYear === currentYear) {
+          currentYearSick++;
+        }
+      });
+
+      // Resturlaub vom Vorjahr berechnen
+      const remainingPreviousVacation = Math.max(0, previousYearVacation - (totalVacationDays * (currentYear - 1 - entryYear)));
+      const remainingCurrentVacation = totalVacationDays - currentYearVacation;
+      const totalRemainingVacation = remainingPreviousVacation + remainingCurrentVacation;
+
+      // Tabelleneinträge erstellen
       entries.forEach(entry => {
         const row = tbody.insertRow();
         row.insertCell(0).textContent = formatDate(entry.date);
@@ -456,22 +480,16 @@
         row.insertCell(4).textContent = entry.type;
         row.insertCell(5).textContent = entry.hours || '0:00';
 
-        let istMin = 0;
-        if (entry.type === 'Arbeit') {
-          const [h, m] = (entry.hours || '0:00').split(":").map(Number);
-          istMin = h * 60 + m;
-          const sollMin = entry.sollHours ? entry.sollHours * 60 : parseFloat(localStorage.getItem('workHours') || 8) * 60;
-          overtimeMinutes += istMin - sollMin;
-        } else if (entry.type === 'Urlaub') vacation++;
-        else if (entry.type === 'Krank') sick++;
-        else if (entry.type === 'Feiertag') holiday++;
-
         const sollHours = entry.sollHours ? entry.sollHours : parseFloat(localStorage.getItem('workHours') || 8);
         row.insertCell(6).textContent = entry.type === 'Arbeit' 
           ? `${Math.floor(sollHours)}:${String(Math.round((sollHours % 1) * 60)).padStart(2, '0')}`
           : '-';
 
-        let diff = istMin - (sollHours * 60);
+        let diff = 0;
+        if (entry.type === 'Arbeit') {
+          const [h, m] = (entry.hours || '0:00').split(":").map(Number);
+          diff = (h * 60 + m) - (sollHours * 60);
+        }
         row.insertCell(7).textContent = entry.type === 'Arbeit'
           ? `${diff < 0 ? '-' : ''}${Math.floor(Math.abs(diff) / 60)}:${String(Math.abs(diff) % 60).padStart(2, '0')}`
           : '-';
@@ -484,7 +502,27 @@
       });
 
       // Statistik aktualisieren
-      updateStats(overtimeMinutes, vacation, totalVacationDays, sick);
+      updateStats(totalOvertimeMinutes, currentYearVacation, remainingPreviousVacation, totalVacationDays, currentYearSick);
+    }
+
+    // Statistik aktualisieren
+    function updateStats(totalOvertimeMinutes, currentYearVacation, remainingPreviousVacation, totalVacationDays, sickDays) {
+      // Überstunden formatieren
+      const oh = Math.floor(Math.abs(totalOvertimeMinutes) / 60);
+      const om = Math.abs(totalOvertimeMinutes) % 60;
+      const sign = totalOvertimeMinutes < 0 ? "-" : "";
+      document.getElementById('overtime').textContent = `${sign}${oh}:${String(om).padStart(2, '0')}`;
+      
+      // Urlaubsstatistik
+      let vacationText = `${currentYearVacation} Tage verbraucht`;
+      if (remainingPreviousVacation > 0) {
+        vacationText += ` (${remainingPreviousVacation} Tage Resturlaub vom Vorjahr)`;
+      }
+      vacationText += `\nNoch ${totalVacationDays - currentYearVacation} von ${totalVacationDays} Tagen verfügbar`;
+      document.getElementById('vacation-days').textContent = vacationText;
+      
+      // Krankheitstage
+      document.getElementById('sick-days').textContent = `${sickDays} Tage`;
     }
 
     // Eintrag löschen
@@ -492,7 +530,6 @@
       if (!confirm("Eintrag wirklich löschen?")) return;
 
       if (!db) {
-        // Fallback zu localStorage
         timeEntries = timeEntries.filter(e => e.id !== id);
         localStorage.setItem('timeEntries', JSON.stringify(timeEntries));
         loadEntries();
@@ -588,7 +625,6 @@
 
       try {
         await saveEntry(entry);
-        // Nach dem Speichern die Einträge neu laden und sortieren
         loadEntries();
         resetForm();
       } catch (error) {
@@ -596,11 +632,13 @@
       }
     }
 
-    // Zeitraum hinzufügen (für Urlaub/Krank/Feiertag)
+    // Zeitraum hinzufügen
     async function addTimeRange() {
       const startDate = document.getElementById('date').value;
       const endDate = document.getElementById('end-date').value;
       const type = document.getElementById('type').value;
+      const currentYear = new Date().getFullYear();
+      const totalVacationDays = parseInt(localStorage.getItem('vacationDays') || 24);
 
       if (!startDate || !endDate) {
         alert('Bitte Start- und Enddatum ausfüllen.');
@@ -610,6 +648,16 @@
       if (new Date(endDate) < new Date(startDate)) {
         alert('Enddatum muss nach Startdatum liegen.');
         return;
+      }
+
+      if (type === 'Urlaub') {
+        const daysToAdd = Math.floor((new Date(endDate) - new Date(startDate)) / (1000 * 60 * 60 * 24)) + 1;
+        const remainingVacation = getRemainingVacationDays();
+        
+        if (daysToAdd > remainingVacation) {
+          alert(`Nicht genug Urlaubstage verfügbar! (Verfügbar: ${remainingVacation} Tage)`);
+          return;
+        }
       }
 
       if (!confirm(`${type}-Zeitraum vom ${formatDate(startDate)} bis ${formatDate(endDate)} hinzufügen?`)) {
@@ -629,7 +677,6 @@
         if (!confirm(`${existingEntries.length} bestehende Einträge im Zeitraum werden überschrieben. Fortfahren?`)) {
           return;
         }
-        // Lösche bestehende Einträge
         for (const entry of existingEntries) {
           await deleteEntry(entry.id);
         }
@@ -653,34 +700,43 @@
         currentDate.setDate(currentDate.getDate() + 1);
       }
 
-      // Nach dem Hinzufügen des Zeitraums die Einträge neu laden und sortieren
       loadEntries();
       resetForm();
       timeRangeDiv.style.display = 'none';
+    }
+
+    // Verfügbare Urlaubstage berechnen
+    function getRemainingVacationDays() {
+      const currentYear = new Date().getFullYear();
+      let currentYearUsed = 0;
+      let previousYearRemaining = 0;
+      const totalVacationDays = parseInt(localStorage.getItem('vacationDays') || 24);
+
+      timeEntries.forEach(entry => {
+        const entryYear = parseInt(entry.date.split("-")[0]);
+        if (entry.type === 'Urlaub') {
+          if (entryYear === currentYear) {
+            currentYearUsed++;
+          } else if (entryYear < currentYear) {
+            previousYearRemaining++;
+          }
+        }
+      });
+
+      // Resturlaub vom Vorjahr berechnen (maximal die Jahresurlaubstage)
+      previousYearRemaining = Math.max(0, Math.min(totalVacationDays, previousYearRemaining - (currentYear - 1 - entryYear) * totalVacationDays));
+      
+      return (totalVacationDays - currentYearUsed) + previousYearRemaining;
     }
 
     // Formular zurücksetzen
     function resetForm() {
       document.getElementById('start-time').value = '';
       document.getElementById('end-time').value = '';
-      document.getElementById('break').value = '30';
+      document.getElementById('break').value = '';
       const nextDay = new Date(new Date(document.getElementById('date').value).getTime() + 86400000);
       document.getElementById('date').valueAsDate = new Date(nextDay);
       document.getElementById('end-date').value = '';
-    }
-
-    // Statistik aktualisieren
-    function updateStats(overtimeMinutes, vacation, totalVacationDays, sick) {
-      const oh = Math.floor(Math.abs(overtimeMinutes) / 60);
-      const om = Math.abs(overtimeMinutes) % 60;
-      const sign = overtimeMinutes < 0 ? "-" : "";
-      document.getElementById('overtime').textContent = `${sign}${oh}:${String(om).padStart(2, '0')}`;
-      
-      const remainingVacation = totalVacationDays - vacation;
-      document.getElementById('vacation-days').textContent = 
-        `${vacation} Tage (noch ${remainingVacation} von ${totalVacationDays} verfügbar)`;
-      
-      document.getElementById('sick-days').textContent = `${sick} Tage`;
     }
 
     // Theme umschalten
@@ -698,7 +754,6 @@
       const monthNames = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 
                          'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'];
       
-      // Einträge filtern und nach Datum sortieren
       const entries = timeEntries
         .filter(e => e.date && e.date.startsWith(selectedMonth))
         .sort((a, b) => new Date(a.date) - new Date(b.date));
@@ -737,7 +792,6 @@
       const monthNames = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 
                          'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'];
       
-      // Einträge filtern und nach Datum sortieren
       const entries = timeEntries
         .filter(e => e.date && e.date.startsWith(selectedMonth))
         .sort((a, b) => new Date(a.date) - new Date(b.date));
@@ -846,18 +900,15 @@
           
           if (confirm(`${data.entries.length} Einträge importieren? Vorherige Daten werden überschrieben.`)) {
             if (db) {
-              // IndexedDB leeren
               const transaction = db.transaction([STORE_NAME], 'readwrite');
               const store = transaction.objectStore(STORE_NAME);
               const clearRequest = store.clear();
               
               clearRequest.onsuccess = async () => {
-                // Neue Einträge hinzufügen
                 for (const entry of data.entries) {
                   await saveEntry(entry);
                 }
                 
-                // Einstellungen übernehmen
                 if (data.settings) {
                   localStorage.setItem('workHours', data.settings.workHours);
                   localStorage.setItem('vacationDays', data.settings.vacationDays);
@@ -869,7 +920,6 @@
                 alert('Import erfolgreich.');
               };
             } else {
-              // Fallback zu localStorage
               timeEntries = data.entries;
               localStorage.setItem('timeEntries', JSON.stringify(timeEntries));
               
