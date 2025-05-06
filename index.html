@@ -746,42 +746,42 @@ function saveEntry(entry) {
                          'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'];
 
       // Einträge filtern und nach Datum sortieren
-      const entries = timeEntries
-        .filter(e => e.date && e.date.startsWith(selectedMonth))
-        .sort((a, b) => new Date(a.date) - new Date(b.date));
+      const entries = timeEntries
+        .filter(e => e.date && e.date.startsWith(selectedMonth))
+        .sort((a, b) => new Date(a.date) - new Date(b.date));
 
-      if (entries.length === 0) return alert('Keine Daten vorhanden.');
+      if (entries.length === 0) return alert('Keine Daten vorhanden.');
 
-      let csv = `Monatsreport ${monthNames[parseInt(month)-1]} ${year}\nDatum;Kommen;Gehen;Pause;Art;Stunden;Sollstunden;Differenz\n`;
-      entries.forEach(e => {
-        const sollHours = e.sollHours ? e.sollHours : parseFloat(localStorage.getItem('workHours') || 8);
-        let diff = '';
+      let csv = `Monatsreport ${monthNames[parseInt(month)-1]} ${year}\nDatum;Kommen;Gehen;Pause;Art;Stunden;Sollstunden;Differenz\n`;
+      entries.forEach(e => {
+        const sollHours = e.sollHours ? e.sollHours : parseFloat(localStorage.getItem('workHours') || 8);
+        let diff = '';
 
-        if (e.type === 'Arbeit') {
-          const [h, m] = (e.hours || '0:00').split(":").map(Number);
-          const istMin = h * 60 + m;
-          const sollMin = sollHours * 60;
-          const diffMin = istMin - sollMin;
-          const sign = diffMin < 0 ? '-' : '';
-          diff = `${sign}${Math.floor(Math.abs(diffMin) / 60)}:${String(Math.abs(diffMin) % 60).padStart(2, '0')}`;
-        }
+        if (e.type === 'Arbeit') {
+          const [h, m] = (e.hours || '0:00').split(":").map(Number);
+          const istMin = h * 60 + m;
+          const sollMin = sollHours * 60;
+          const diffMin = istMin - sollMin;
+          const sign = diffMin < 0 ? '-' : '';
+          diff = `${sign}${Math.floor(Math.abs(diffMin) / 60)}:${String(Math.abs(diffMin) % 60).padStart(2, '0')}`;
+        }
 
-        csv += `${formatDate(e.date)};${e.type === 'Arbeit' ? e.start || '' : ''};${e.type === 'Arbeit' ? e.end || '' : ''};${e.type === 'Arbeit' ? e.pause : ''};${e.type};${e.hours || '0:00'};${e.type === 'Arbeit' ? sollHours : ''};${diff}\n`;
-      });
+        csv += `${formatDate(e.date)};${e.type === 'Arbeit' ? e.start || '' : ''};${e.type === 'Arbeit' ? e.end || '' : ''};${e.type === 'Arbeit' ? e.pause : ''};${e.type};${e.hours || '0:00'};${e.type === 'Arbeit' ? sollHours : ''};${diff}\n`;
+      });
 
-      const oh = Math.floor(Math.abs(totalOvertimeMinutes) / 60);
-      const om = Math.abs(totalOvertimeMinutes) % 60;
-      const overtime
-      const sign = totalOvertimeMinutes < 0 ? "-" : "";
-      const vacationTotal = parseInt(localStorage.getItem('vacationDays') || 24) + parseInt(localStorage.getItem('carryoverDays') || 0);
-      const vacationTaken = timeEntries.filter(e => e.type === 'Urlaub').length;
-      const sickDays = timeEntries.filter(e => e.type === 'Krank').length;
+      const oh = Math.floor(Math.abs(totalOvertimeMinutes) / 60);
+      const om = Math.abs(totalOvertimeMinutes) % 60;
+      const sign = totalOvertimeMinutes < 0 ? "-" : "";
+      const overtime = `${sign}${oh}:${String(om).padStart(2, '0')}`; // Hier wird 'overtime' initialisiert
+      const vacationTotal = parseInt(localStorage.getItem('vacationDays') || 24) + parseInt(localStorage.getItem('carryoverDays') || 0);
+      const vacationTaken = timeEntries.filter(e => e.type === 'Urlaub').length;
+      const sickDays = timeEntries.filter(e => e.type === 'Krank').length;
 
-      csv += `\nÜberstunden:;${sign}${oh}:${String(om).padStart(2, '0')}\nUrlaubstage (genommen/verfügbar):;${vacationTaken}/${vacationTotal}\nKrankheitstage:;${sickDays}\n`;
+      csv += `\nÜberstunden:;${overtime}\nUrlaubstage (genommen/verfügbar):;${vacationTaken}/${vacationTotal}\nKrankheitstage:;${sickDays}\n`;
 
-      download(`Monatsreport_${monthNames[parseInt(month)-1]}_${year}.csv`, csv, 'text/csv');
-    }
-
+      download(`Monatsreport_${monthNames[parseInt(month)-1]}_${year}.csv`, csv, 'text/csv');
+    }
+    
     // PDF Export
     function exportPDF() {
       const selectedMonth = monthInput.value;
