@@ -404,7 +404,7 @@
         const request = store.add(entry);
 
         request.onsuccess = () =>
-          resolve();
+          resolve(); ; 
         };
         request.onerror = (event) => {
           console.error('Error saving entry:', event.target.error);
