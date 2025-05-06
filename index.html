@@ -536,29 +536,30 @@ function saveEntry(entry) {
       }
 
       const transaction = db.transaction([STORE_NAME], 'readwrite');
-      const store = transaction.objectStore(STORE_NAME);
-      const getRequest = store.get(id);
+      const store = transaction.objectStore(STORE_NAME);
+      const getRequest = store.get(id);
 
-      getRequest.onsuccess = () => {
-        const deletedEntry = getRequest.result;
-        if (deletedEntry && deletedEntry.type === 'Arbeit' && deletedEntry.hours) {
-          const [h, m] = deletedEntry.hours.split(':').map(Number);
-          totalOvertimeMinutes -= (h * 60 + m) - (deletedEntry.sollHours ? deletedEntry.sollHours * 60 : parseFloat(localStorage.getItem('workHours') || 8) * 60);
-          localStorage.setItem('totalOvertimeMinutes', totalOvertimeMinutes);
-        }
-        const deleteRequest = store.delete(id);
-        deleteRequest.onsuccess = () => {
-          timeEntries = timeEntries.filter(e => e.id !== id);
-          loadEntries();
-        };
-        deleteRequest.onerror = (event) => {
-          console.error('Error deleting entry:', event.target.error);
-        };
-      };
+      getRequest.onsuccess = () => {
+        const deletedEntry = getRequest.result;
+        const deleteRequest = store.delete(id);
+        deleteRequest.onsuccess = () => {
+          timeEntries = timeEntries.filter(e => e.id !== id);
+          // Überstunden nach erfolgreichem Löschen anpassen
+          if (deletedEntry && deletedEntry.type === 'Arbeit' && deletedEntry.hours) {
+            const [h, m] = deletedEntry.hours.split(':').map(Number);
+            totalOvertimeMinutes -= (h * 60 + m) - (deletedEntry.sollHours ? deletedEntry.sollHours * 60 : parseFloat(localStorage.getItem('workHours') || 8) * 60);
+            localStorage.setItem('totalOvertimeMinutes', totalOvertimeMinutes);
+          }
+          loadEntries();
+        };
+        deleteRequest.onerror = (event) => {
+          console.error('Error deleting entry:', event.target.error);
+        };
+      };
 
-      getRequest.onerror = (event) => {
-        console.error('Error getting entry for deletion:', event.target.error);
-      };
+      getRequest.onerror = (event) => {
+        console.error('Error getting entry for deletion:', event.target.error);
+      };
     }
 
     // Eintrag hinzufügen
@@ -683,23 +684,37 @@ function saveEntry(entry) {
         }
       }
 
-      while (currentDate <= end) {
-        const dateStr = currentDate.toISOString().split('T')[0];
-        const entry = {
-          date: dateStr,
-          type,
-          hours: '0:00',
-          sollHours: parseFloat(workHoursInput.value)
-        };
+      for (const entry of existingEntries) {
+        try {
+          await deleteEntry(entry.id);
+        } catch (error) {
+          console.error('Fehler beim Löschen eines bestehenden Eintrags:', error);
+          alert(`Fehler beim Löschen eines Eintrags im Zeitraum: ${error.message}. Der Vorgang wurde möglicherweise nicht vollständig abgeschlossen.`);
+          return; // Optional: Den gesamten Vorgang abbrechen, wenn ein Fehler auftritt
+        }
+      }
 
-        try {
-          await saveEntry(entry);
-        } catch (error) {
-          console.error('Error saving entry:', error);
-        }
+      const currentDate = new Date(startDate);
+      const end = new Date(endDate);
 
-        currentDate.setDate(currentDate.getDate() + 1);
-      }
+      while (currentDate <= end) {
+        const dateStr = currentDate.toISOString().split('T')[0];
+        const entry = {
+          date: dateStr,
+          type,
+          hours: '0:00',
+          sollHours: parseFloat(workHoursInput.value)
+        };
+
+        try {
+          await saveEntry(entry);
+        } catch (error) {
+          console.error('Fehler beim Speichern des Eintrags im Zeitraum:', error);
+          alert(`Fehler beim Speichern eines Eintrags im Zeitraum: ${error.message}.`);
+        }
+
+        currentDate.setDate(currentDate.getDate() + 1);
+      }
 
       // Nach dem Hinzufügen des Zeitraums die Einträge neu laden und sortieren
       loadEntries();
