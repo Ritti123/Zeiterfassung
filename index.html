@@ -387,32 +387,29 @@
       });
     }
 
-    // Daten in IndexedDB speichern
-    function saveEntry(entry) {
-      return new Promise((resolve, reject) => {
-        if (!db) {
-          // Fallback zu localStorage
-          timeEntries.push(entry);
-          localStorage.setItem('timeEntries', JSON.stringify(timeEntries));
-          localStorage.setItem('totalOvertimeMinutes', totalOvertimeMinutes);
-          resolve();
-          return;
-        }
-
-        const transaction = db.transaction([STORE_NAME], 'readwrite');
-        const store = transaction.objectStore(STORE_NAME);
-        const request = store.add(entry);
-
-        request.onsuccess = () =>
-          resolve(); 
-        })
-        request.onerror = (event) => {
-          console.error('Error saving entry:', event.target.error);
-          reject(event.target.error);
-        };
-      };
+   // Daten in IndexedDB speichern
+function saveEntry(entry) {
+  return new Promise((resolve, reject) => {
+    if (!db) {
+      // Fallback zu localStorage
+      timeEntries.push(entry);
+      localStorage.setItem('timeEntries', JSON.stringify(timeEntries));
+      localStorage.setItem('totalOvertimeMinutes', totalOvertimeMinutes);
+      resolve();
+      return;
     }
 
+    const transaction = db.transaction([STORE_NAME], 'readwrite');
+    const store = transaction.objectStore(STORE_NAME);
+    const request = store.add(entry);
+
+    request.onsuccess = () => resolve();
+    request.onerror = (event) => {
+      console.error('Error saving entry:', event.target.error);
+      reject(event.target.error);
+    };
+  });
+}
     // Daten aus IndexedDB laden
     function loadEntries() {
       const selectedMonth = monthInput.value;
