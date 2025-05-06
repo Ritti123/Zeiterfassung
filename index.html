@@ -173,15 +173,15 @@
     </div>
     <div>
       <label for="start-time">Kommen:</label>
-      <input type="time" id="start-time" placeholder="z. B. 08:00" pattern="[0-9]{2}:[0-9]{2}">
+      <input type="time" id="start-time" placeholder="z.&#8239;B. 08:00" pattern="[0-9]{2}:[0-9]{2}">
     </div>
     <div>
       <label for="end-time">Gehen:</label>
-      <input type="time" id="end-time" placeholder="z. B. 16:30" pattern="[0-9]{2}:[0-9]{2}">
+      <input type="time" id="end-time" placeholder="z.&#8239;B. 16:30" pattern="[0-9]{2}:[0-9]{2}">
     </div>
     <div>
       <label for="break">Pause (Minuten):</label>
-      <input type="number" id="break" value="30" placeholder="z. B. 30" min="0" max="240">
+      <input type="number" id="break" value="30" placeholder="z.&#8239;B. 30" min="0" max="240">
     </div>
     <div>
       <label for="type">Art:</label>
@@ -249,12 +249,8 @@
   </div>
 
   <script>
-    // IndexedDB für bessere Performance
-    const DB_NAME = 'TimeTrackingDB';
-    const DB_VERSION = 2; // Version erhöht für PWA
-    const STORE_NAME = 'timeEntries';
-    let db;
-    let timeEntries = [];
+    // Kein IndexedDB, wir verwenden localStorage
+    let timeEntries = JSON.parse(localStorage.getItem('timeEntries') || '[]');
     let totalOvertimeMinutes = parseInt(localStorage.getItem('totalOvertimeMinutes') || 0);
     const tbody = document.querySelector('#time-entries tbody');
     const overtimeDisplay = document.getElementById('overtime');
@@ -279,7 +275,7 @@
       const month = String(now.getMonth() + 1).padStart(2, '0');
       monthInput.value = `${year}-${month}`;
       loadSettings();
-      openDatabase();
+      loadEntries();
       checkBackupReminder();
 
       if (window.matchMedia('(display-mode: standalone)').matches) {
@@ -313,32 +309,6 @@
       });
     });
 
-    // Datenbank öffnen oder erstellen
-    function openDatabase() {
-      const request = indexedDB.open(DB_NAME, DB_VERSION);
-
-      request.onsuccess = (event) => {
-        db = event.target.result;
-        console.log('IndexedDB geöffnet');
-        loadEntries();
-      };
-
-      request.onupgradeneeded = (event) => {
-        const db = event.target.result;
-        if (!db.objectStoreNames.contains(STORE_NAME)) {
-          const store = db.createObjectStore(STORE_NAME, { keyPath: 'id', autoIncrement: true });
-          store.createIndex('date', 'date', { unique: false });
-          console.log('Object Store erstellt');
-        }
-      };
-
-      request.onerror = (event) => {
-        console.error('Fehler beim Öffnen der Datenbank:', event.target.error);
-        // Fallback zu localStorage, falls IndexedDB fehlschlägt
-        loadEntries();
-      };
-    }
-
     // Einstellungen laden
     function loadSettings() {
       workHoursInput.value = localStorage.getItem('workHours') || '8';
@@ -361,32 +331,7 @@
       loadEntries(); // Nach dem Speichern neu laden, um Urlaubstage zu aktualisieren
     }
 
-    // Eintrag in IndexedDB speichern
-    async function saveEntry(entry) {
-      if (!db) {
-        // Fallback zu localStorage
-        entry.id = Date.now();
-        timeEntries.push(entry);
-        localStorage.setItem('timeEntries', JSON.stringify(timeEntries));
-        return Promise.resolve();
-      }
-
-      return new Promise((resolve, reject) => {
-        const transaction = db.transaction([STORE_NAME], 'readwrite');
-        const store = transaction.objectStore(STORE_NAME);
-        const request = store.add(entry);
-
-        request.onsuccess = () => {
-          resolve();
-        };
-
-        request.onerror = (event) => {
-          console.error('Error saving entry:', event.target.error);
-          reject(event.target.error);
-        };
-      });
-    }
-    // Daten aus IndexedDB laden
+    // Daten aus localStorage laden
     function loadEntries() {
       const selectedMonth = monthInput.value;
       const [year, month] = selectedMonth.split("-");
@@ -394,35 +339,19 @@
                          'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'];
       reportTitle.textContent = `Monatsreport ${monthNames[parseInt(month)-1]} ${year}`;
 
-      if (!db) {
-        // Fallback zu localStorage
-        timeEntries = JSON.parse(localStorage.getItem('timeEntries') || '[]');
-        totalOvertimeMinutes = parseInt(localStorage.getItem('totalOvertimeMinutes') || 0);
-        // Einträge nach Datum sortieren
-        timeEntries.sort((a, b) => new Date(a.date) - new Date(b.date));
-        renderEntries(year);
-        return;
-      }
+      timeEntries = JSON.parse(localStorage.getItem('timeEntries') || '[]');
+      totalOvertimeMinutes = parseInt(localStorage.getItem('totalOvertimeMinutes') || 0);
+      // Einträge nach Datum sortieren
+      timeEntries.sort((a, b) => new Date(a.date) - new Date(b.date));
+      renderEntries(year);
+    }
 
-      const transaction = db.transaction([STORE_NAME], 'readonly');
-      const store = transaction.objectStore(STORE_NAME);
-      const request = store.getAll();
-
-      request.onsuccess = (event) => {
-        timeEntries = event.target.result || [];
-        // Einträge nach Datum sortieren
-        timeEntries.sort((a, b) => new Date(a.date) - new Date(b.date));
-        renderEntries(year);
-      };
-
-      request.onerror = (event) => {
-        console.error('Error loading entries:', event.target.error);
-        timeEntries = JSON.parse(localStorage.getItem('timeEntries') || '[]');
-        totalOvertimeMinutes = parseInt(localStorage.getItem('totalOvertimeMinutes') || 0);
-        // Einträge nach Datum sortieren
-        timeEntries.sort((a, b) => new Date(a.date) - new Date(b.date));
-        renderEntries(year);
-      };
+    // Eintrag speichern (localStorage)
+    function saveEntry(entry) {
+      entry.id = Date.now();
+      timeEntries.push(entry);
+      localStorage.setItem('timeEntries', JSON.stringify(timeEntries));
+      return Promise.resolve();
     }
 
     // Einträge rendern
@@ -493,49 +422,19 @@
       updateStats(totalOvertimeMinutes, vacationDaysTaken, annualVacationDays + carryoverDays, sickDaysTaken);
     }
 
-    // Eintrag löschen
+    // Eintrag löschen (localStorage)
     function deleteEntry(id) {
       if (!confirm("Eintrag wirklich löschen?")) return;
 
-      if (!db) {
-        // Fallback zu localStorage
-        const deletedEntry = timeEntries.find(e => e.id === id);
-        if (deletedEntry && deletedEntry.type === 'Arbeit' && deletedEntry.hours) {
-          const [h, m] = deletedEntry.hours.split(':').map(Number);
-          totalOvertimeMinutes -= (h * 60 + m) - (deletedEntry.sollHours ? deletedEntry.sollHours * 60 : parseFloat(localStorage.getItem('workHours') || 8) * 60);
-          localStorage.setItem('totalOvertimeMinutes', totalOvertimeMinutes);
-        }
-        timeEntries = timeEntries.filter(e => e.id !== id);
-        localStorage.setItem('timeEntries', JSON.stringify(timeEntries));
-        loadEntries();
-        return;
+      const deletedEntry = timeEntries.find(e => e.id === id);
+      if (deletedEntry && deletedEntry.type === 'Arbeit' && deletedEntry.hours) {
+        const [h, m] = deletedEntry.hours.split(':').map(Number);
+        totalOvertimeMinutes -= (h * 60 + m) - (deletedEntry.sollHours ? deletedEntry.sollHours * 60 : parseFloat(localStorage.getItem('workHours') || 8) * 60);
+        localStorage.setItem('totalOvertimeMinutes', totalOvertimeMinutes);
       }
-
-      const transaction = db.transaction([STORE_NAME], 'readwrite');
-      const store = transaction.objectStore(STORE_NAME);
-      const getRequest = store.get(id);
-
-      getRequest.onsuccess = () => {
-        const deletedEntry = getRequest.result;
-        const deleteRequest = store.delete(id);
-        deleteRequest.onsuccess = () => {
-          timeEntries = timeEntries.filter(e => e.id !== id);
-          // Überstunden nach erfolgreichem Löschen anpassen
-          if (deletedEntry && deletedEntry.type === 'Arbeit' && deletedEntry.hours) {
-            const [h, m] = deletedEntry.hours.split(':').map(Number);
-            totalOvertimeMinutes -= (h * 60 + m) - (deletedEntry.sollHours ? deletedEntry.sollHours * 60 : parseFloat(localStorage.getItem('workHours') || 8) * 60);
-            localStorage.setItem('totalOvertimeMinutes', totalOvertimeMinutes);
-          }
-          loadEntries();
-        };
-        deleteRequest.onerror = (event) => {
-          console.error('Error deleting entry:', event.target.error);
-        };
-      };
-
-      getRequest.onerror = (event) => {
-        console.error('Error getting entry for deletion:', event.target.error);
-      };
+      timeEntries = timeEntries.filter(e => e.id !== id);
+      localStorage.setItem('timeEntries', JSON.stringify(timeEntries));
+      loadEntries();
     }
 
     // Eintrag hinzufügen
@@ -556,7 +455,7 @@
       const existingEntry = timeEntries.find(e => e.date === date);
       if (existingEntry) {
         if (!confirm("Für dieses Datum existiert bereits ein Eintrag. Überschreiben?")) return;
-        await deleteEntry(existingEntry.id);
+        deleteEntry(existingEntry.id);
       }
 
       // Validierung der Zeiten
@@ -569,7 +468,7 @@
         if (!isValidTime(start) || !isValidTime(end)) {
           alert('Ungültige Zeitangabe. Bitte im Format HH:MM eingeben (z.B. 08:30).');
           return;
-        }
+            }
 
         const startDate = new Date(`${date}T${start}`);
         const endDate = new Date(`${date}T${end}`);
@@ -596,7 +495,7 @@
         date,
         type,
         hours: '0:00',
-        pause: type === 'Arbeit' ? pause : 0,
+        pause: type === 'Arbeit' ? pause : 0,
         sollHours: sollHours
       };
 
@@ -611,14 +510,10 @@
         entry.end = end;
       }
 
-      try {
-        await saveEntry(entry);
-        // Nach dem Speichern die Einträge neu laden und sortieren
-        loadEntries();
-        resetForm();
-      } catch (error) {
-        alert('Fehler beim Speichern: ' + error.message);
-      }
+      await saveEntry(entry);
+      // Nach dem Speichern die Einträge neu laden und sortieren
+      loadEntries();
+      resetForm();
     }
 
     // Zeitraum hinzufügen (für Urlaub/Krank/Feiertag)
@@ -641,13 +536,10 @@
         return;
       }
 
-      const currentDate = new Date(startDate);
-      const end = new Date(endDate);
-
       // Prüfen auf bestehende Einträge im Zeitraum
       const existingEntries = timeEntries.filter(e => {
         const entryDate = new Date(e.date);
-        return entryDate >= currentDate && entryDate <= end;
+        return entryDate >= new Date(startDate) && entryDate <= new Date(endDate);
       });
 
       if (existingEntries.length > 0) {
@@ -655,19 +547,7 @@
           return;
         }
         // Lösche bestehende Einträge
-        for (const entry of existingEntries) {
-          await deleteEntry(entry.id);
-        }
-      }
-
-      for (const entry of existingEntries) {
-        try {
-          await deleteEntry(entry.id);
-        } catch (error) {
-          console.error('Fehler beim Löschen eines bestehenden Eintrags:', error);
-          alert(`Fehler beim Löschen eines Eintrags im Zeitraum: ${error.message}. Der Vorgang wurde möglicherweise nicht vollständig abgeschlossen.`);
-          return; // Optional: Den gesamten Vorgang abbrechen, wenn ein Fehler auftritt
-        }
+        existingEntries.forEach(entry => deleteEntry(entry.id));
       }
 
       const currentDate = new Date(startDate);
@@ -681,14 +561,7 @@
           hours: '0:00',
           sollHours: parseFloat(workHoursInput.value)
         };
-
-        try {
-          await saveEntry(entry);
-        } catch (error) {
-          console.error('Fehler beim Speichern des Eintrags im Zeitraum:', error);
-          alert(`Fehler beim Speichern eines Eintrags im Zeitraum: ${error.message}.`);
-        }
-
+        await saveEntry(entry);
         currentDate.setDate(currentDate.getDate() + 1);
       }
 
@@ -810,9 +683,10 @@
             const [h, m] = (e.hours || '0:00').split(":").map(Number);
             const istMin = h * 60 + m;
             const sollMin = sollHours * 60;
-            const diffMin = istMin - sollMin
-            const sign = diffMin < 0 ? '-' : '';
-            diff = `${sign}${Math.floor(Math.abs(diffMin) / 60)}:${String(Math.abs(diffMin) % 60).padStart(2, '0')}`;
+            const diffMin = istMin - sollMin;
+            const sign = diffMin < 0 ? '-' : '';
+            diff = `${sign}${
+                Math.floor(Math.abs(diffMin) / 60)}:${String(Math.abs(diffMin) % 60).padStart(2, '0')}`;
           }
 
           data.push([
@@ -891,59 +765,30 @@
       const file = e.target.files[0];
       if (!file) return;
       const reader = new FileReader();
-      reader.onload = async function (event) {
+      reader.onload = function (event) {
         try {
           const data = JSON.parse(event.target.result);
           if (!Array.isArray(data.entries)) throw new Error('Ungültiges Format');
 
           if (confirm(`${data.entries.length} Einträge importieren? Vorherige Daten werden überschrieben.`)) {
-            if (db) {
-              // IndexedDB leeren
-              const transaction = db.transaction([STORE_NAME], 'readwrite');
-              const store = transaction.objectStore(STORE_NAME);
-              const clearRequest = store.clear();
+            timeEntries = data.entries;
+            localStorage.setItem('timeEntries', JSON.stringify(timeEntries));
 
-              clearRequest.onsuccess = async () => {
-                // Neue Einträge hinzufügen
-                for (const entry of data.entries) {
-                  await saveEntry(entry);
-                }
-
-                // Einstellungen übernehmen
-                if (data.settings) {
-                  localStorage.setItem('workHours', data.settings.workHours);
-                  localStorage.setItem('vacationDays', data.settings.vacationDays);
-                  localStorage.setItem('carryoverDays', data.settings.carryoverDays);
-                  localStorage.setItem('totalOvertimeMinutes', data.settings.totalOvertimeMinutes);
-                  document.getElementById('work-hours').value = data.settings.workHours;
-                  document.getElementById('vacation-days-year').value = data.settings.vacationDays;
-                  document.getElementById('carryover-days').value = data.settings.carryoverDays;
-                  totalOvertimeMinutes = data.settings.totalOvertimeMinutes;
-                }
-
-                loadEntries();
-                alert('Import erfolgreich.');
-              };
-            } else {
-              // Fallback zu localStorage
-              timeEntries = data.entries;
-              localStorage.setItem('timeEntries', JSON.stringify(timeEntries));
-
-              if (data.settings) {
-                localStorage.setItem('workHours', data.settings.workHours);
-                localStorage.setItem('vacationDays', data.settings.vacationDays);
-                localStorage.setItem('carryoverDays', data.settings.carryoverDays);
-                localStorage.setItem('totalOvertimeMinutes', data.settings.totalOvertimeMinutes);
-                document.getElementById('work-hours').value = data.settings.workHours;
-                document.getElementById('vacation-days-year').value = data.settings.vacationDays;
-                document.getElementById('carryover-days').value = data.settings.carryoverDays;
-                totalOvertimeMinutes = data.settings.totalOvertimeMinutes;
-              }
-
-              loadEntries();
-              alert('Import erfolgreich.');
+            if (data.settings) {
+              localStorage.setItem('workHours', data.settings.workHours);
+              localStorage.setItem('vacationDays', data.settings.vacationDays);
+              localStorage.setItem('carryoverDays', data.settings.carryoverDays);
+              localStorage.setItem('totalOvertimeMinutes', data.settings.totalOvertimeMinutes);
+              document.getElementById('work-hours').value = data.settings.workHours;
+              document.getElementById('vacation-days-year').value = data.settings.vacationDays;
+              document.getElementById('carryover-days').value = data.settings.carryoverDays;
+              totalOvertimeMinutes = data.settings.totalOvertimeMinutes;
             }
-          } catch (err) {
+
+            loadEntries();
+            alert('Import erfolgreich.');
+          }
+        } catch (err) {
           alert('Fehler beim Import: ' + err.message);
         }
       };
@@ -988,8 +833,7 @@
     function checkBackupReminder() {
       const last = backupTimestamps[backupTimestamps.length - 1] || 0;
       const now = new Date().getTime();
-      const oneWeek = 7 * 24 * 60 * 60 * 10
-      00;
+      const oneWeek = 7 * 24 * 60 * 60 * 1000;
       if (now - last > oneWeek) {
         alert("Es ist über eine Woche seit dem letzten Backup vergangen. Bitte speichern Sie ein neues Backup.");
       }
