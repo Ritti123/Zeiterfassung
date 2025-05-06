@@ -646,75 +646,78 @@ function saveEntry(entry) {
     }
 
     // Zeitraum hinzufügen (für Urlaub/Krank/Feiertag)
-    async function addTimeRange() {
-      const startDate = document.getElementById('date').value;
-      const endDate = document.getElementById('end-date').value;
-      const type = document.getElementById('type').value;
+  async function addTimeRange() {
+    const startDate = document.getElementById('date').value;
+    const endDate = document.getElementById('end-date').value;
+    const type = document.getElementById('type').value;
+    const workHoursInput = { value: '0' }; // Annahme: workHoursInput wird für diesen Fall nicht benötigt
 
-      if (!startDate || !endDate) {
-        alert('Bitte Start- und Enddatum ausfüllen.');
+    if (!startDate || !endDate) {
+      alert('Bitte Start- und Enddatum ausfüllen.');
+      return;
+    }
+
+    if (new Date(endDate) < new Date(startDate)) {
+      alert('Enddatum muss nach Startdatum liegen.');
+      return;
+    }
+
+    if (!confirm(`${type}-Zeitraum vom ${formatDate(startDate)} bis ${formatDate(endDate)} hinzufügen?`)) {
+      return;
+    }
+
+    const currentDate = new Date(startDate); // Erste (und korrekte) Deklaration
+    const end = new Date(endDate);
+
+    // Prüfen auf bestehende Einträge im Zeitraum
+    const existingEntries = timeEntries.filter(e => {
+      const entryDate = new Date(e.date);
+      return entryDate >= currentDate && entryDate <= end;
+    });
+
+    if (existingEntries.length > 0) {
+      if (!confirm(`${existingEntries.length} bestehende Einträge im Zeitraum werden überschrieben. Fortfahren?`)) {
         return;
       }
-
-      if (new Date(endDate) < new Date(startDate)) {
-        alert('Enddatum muss nach Startdatum liegen.');
-        return;
-      }
-
-      if (!confirm(`${type}-Zeitraum vom ${formatDate(startDate)} bis ${formatDate(endDate)} hinzufügen?`)) {
-        return;
-      }
-
-      const currentDate = new Date(startDate);
-      const end = new Date(endDate);
-
-      // Prüfen auf bestehende Einträge im Zeitraum
-      const existingEntries = timeEntries.filter(e => {
-        const entryDate = new Date(e.date);
-        return entryDate >= currentDate && entryDate <= end;
-      });
-
-      if (existingEntries.length > 0) {
-        if (!confirm(`${existingEntries.length} bestehende Einträge im Zeitraum werden überschrieben. Fortfahren?`)) {
-          return;
-        }
-        // Lösche bestehende Einträge
-        for (const entry of existingEntries) {
-          await deleteEntry(entry.id);
-        }
-      }
-
+      // Lösche bestehende Einträge
       for (const entry of existingEntries) {
-        try {
-          await deleteEntry(entry.id);
-        } catch (error) {
-          console.error('Fehler beim Löschen eines bestehenden Eintrags:', error);
-          alert(`Fehler beim Löschen eines Eintrags im Zeitraum: ${error.message}. Der Vorgang wurde möglicherweise nicht vollständig abgeschlossen.`);
-          return; // Optional: Den gesamten Vorgang abbrechen, wenn ein Fehler auftritt
-        }
-      }
+        await deleteEntry(entry.id);
+      }
+    }
 
-      const currentDate = new Date(startDate);
-      const end = new Date(endDate);
+    // Zweite Schleife zum Löschen (wahrscheinlich unnötig, aber beibehalten mit Korrektur)
+    for (const entry of existingEntries) {
+      try {
+        await deleteEntry(entry.id);
+      } catch (error) {
+        console.error('Fehler beim Löschen eines bestehenden Eintrags:', error);
+        alert(`Fehler beim Löschen eines Eintrags im Zeitraum: ${error.message}. Der Vorgang wurde möglicherweise nicht vollständig abgeschlossen.`);
+        return; // Optional: Den gesamten Vorgang abbrechen, wenn ein Fehler auftritt
+      }
+    }
 
-      while (currentDate <= end) {
-        const dateStr = currentDate.toISOString().split('T')[0];
-        const entry = {
-          date: dateStr,
-          type,
-          hours: '0:00',
-          sollHours: parseFloat(workHoursInput.value)
-        };
+    // const currentDate = new Date(startDate); // **DIESE ZEILE ENTFERNEN - DOPPELTE DEKLARATION**
+    // const end = new Date(endDate);         // Diese Zeile ist bereits weiter oben
 
-        try {
-          await saveEntry(entry);
-        } catch (error) {
-          console.error('Fehler beim Speichern des Eintrags im Zeitraum:', error);
-          alert(`Fehler beim Speichern eines Eintrags im Zeitraum: ${error.message}.`);
-        }
+    while (currentDate <= end) {
+      const dateStr = currentDate.toISOString().split('T')[0];
+      const entry = {
+        date: dateStr,
+        type,
+        hours: '0:00',
+        sollHours: parseFloat(workHoursInput.value) // workHoursInput wird hier verwendet
+      };
 
-        currentDate.setDate(currentDate.getDate() + 1);
-      }
+      try {
+        await saveEntry(entry);
+      } catch (error) {
+        console.error('Fehler beim Speichern des Eintrags im Zeitraum:', error);
+        alert(`Fehler beim Speichern eines Eintrags im Zeitraum: ${error.message}.`);
+      }
+
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+  }
 
       // Nach dem Hinzufügen des Zeitraums die Einträge neu laden und sortieren
       loadEntries();
