@@ -1,541 +1,517 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="theme-color" content="#3498db">
-  <title>Zeiterfassung</title>
-  <link rel="manifest" href="/manifest.json">
-  <link rel="apple-touch-icon" href="icons/icon-192x192.png">
-  <style>
-    :root {
-      --bg-color: #f4f6f8;
-      --text-color: #333;
-      --section-bg: #fff;
-      --border-color: #ddd;
-      --button-primary: #3498db;
-      --button-danger: #e74c3c;
-      --button-success: #2ecc71;
-      --shadow: 0 1px 3px rgba(0,0,0,0.1);
-      --input-border: #ccc;
-      --stat-bg: #fff;
-    }
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#3498db">
+  <title>Zeiterfassung</title>
+  <link rel="manifest" href="/manifest.json">
+  <link rel="apple-touch-icon" href="icons/icon-192x192.png">
+  <style>
+    :root {
+      --bg-color: #f4f6f8;
+      --text-color: #333;
+      --section-bg: #fff;
+      --border-color: #ddd;
+      --button-primary: #3498db;
+      --button-danger: #e74c3c;
+      --button-success: #2ecc71;
+      --shadow: 0 1px 3px rgba(0,0,0,0.1);
+      --input-border: #ccc;
+      --stat-bg: #fff;
+    }
 
-    [data-theme="dark"] {
-      --bg-color: #1a1a1a;
-      --text-color: #f0f0f0;
-      --section-bg: #2d2d2d;
-      --border-color: #444;
-      --button-primary: #2980b9;
-      --button-danger: #c0392b;
-      --button-success: #27ae60;
-      --shadow: 0 1px 3px rgba(0,0,0,0.3);
-      --input-border: #555;
-      --stat-bg: #3d3d3d;
-    }
+    [data-theme="dark"] {
+      --bg-color: #1a1a1a;
+      --text-color: #f0f0f0;
+      --section-bg: #2d2d2d;
+      --border-color: #444;
+      --button-primary: #2980b9;
+      --button-danger: #c0392b;
+      --button-success: #27ae60;
+      --shadow: 0 1px 3px rgba(0,0,0,0.3);
+      --input-border: #555;
+      --stat-bg: #3d3d3d;
+    }
 
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
-      max-width: 700px;
-      margin: 0 auto;
-      padding: 20px;
-      background: var(--bg-color);
-      color: var(--text-color);
-      transition: all 0.3s ease;
-      -webkit-tap-highlight-color: transparent;
-    }
-    h2, h3, h4 { margin-top: 0; }
-    .section {
-      background: var(--section-bg);
-      border: 1px solid var(--border-color);
-      padding: 20px;
-      margin-bottom: 20px;
-      border-radius: 10px;
-      box-shadow: var(--shadow);
-    }
-    input, select, button {
-      padding: 10px;
-      margin: 10px 0;
-      width: 100%;
-      box-sizing: border-box;
-      border: 1px solid var(--input-border);
-      border-radius: 6px;
-      font-size: 16px;
-      background: var(--section-bg);
-      color: var(--text-color);
-    }
-    input::placeholder { color: #aaa; }
-    button {
-      background-color: var(--button-primary);
-      color: white;
-      border: none;
-      cursor: pointer;
-      font-weight: bold;
-      -webkit-appearance: none;
-    }
-    button.delete { background-color: var(--button-danger); }
-    button.secondary { background-color: var(--button-success); }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 20px;
-      background-color: var(--section-bg);
-    }
-    th, td {
-      border: 1px solid var(--border-color);
-      padding: 8px;
-      text-align: center;
-    }
-    th { background-color: var(--stat-bg); }
-    .stats {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      margin-top: 20px;
-    }
-    .stat-box {
-      flex: 1;
-      min-width: 140px;
-      border: 1px solid var(--border-color);
-      padding: 10px;
-      border-radius: 5px;
-      background-color: var(--stat-bg);
-    }
-    .settings { margin-top: 20px; }
-    .theme-toggle {
-      position: fixed;
-      top: 10px;
-      right: 10px;
-      width: 40px;
-      height: 40px;
-      border-radius: 50%;
-      background: var(--button-primary);
-      color: white;
-      border: none;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 100;
-    }
-    .install-btn {
-      position: fixed;
-      top: 60px;
-      right: 10px;
-      width: 40px;
-      height: 40px;
-      border-radius: 50%;
-      background: var(--button-success);
-      color: white;
-      border: none;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 100;
-      display: none;
-    }
-    @media (max-width: 600px) {
-      .stat-box { min-width: 100%; }
-      table { font-size: 14px; }
-      th, td { padding: 5px; }
-    }
-    @media (display-mode: standalone) {
-      body {
-        padding-top: 20px;
-      }
-    }
-  </style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+      max-width: 700px;
+      margin: 0 auto;
+      padding: 20px;
+      background: var(--bg-color);
+      color: var(--text-color);
+      transition: all 0.3s ease;
+      -webkit-tap-highlight-color: transparent;
+    }
+    h2, h3, h4 { margin-top: 0; }
+    .section {
+      background: var(--section-bg);
+      border: 1px solid var(--border-color);
+      padding: 20px;
+      margin-bottom: 20px;
+      border-radius: 10px;
+      box-shadow: var(--shadow);
+    }
+    input, select, button {
+      padding: 10px;
+      margin: 10px 0;
+      width: 100%;
+      box-sizing: border-box;
+      border: 1px solid var(--input-border);
+      border-radius: 6px;
+      font-size: 16px;
+      background: var(--section-bg);
+      color: var(--text-color);
+    }
+    input::placeholder { color: #aaa; }
+    button {
+      background-color: var(--button-primary);
+      color: white;
+      border: none;
+      cursor: pointer;
+      font-weight: bold;
+      -webkit-appearance: none;
+    }
+    button.delete { background-color: var(--button-danger); }
+    button.secondary { background-color: var(--button-success); }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+      background-color: var(--section-bg);
+    }
+    th, td {
+      border: 1px solid var(--border-color);
+      padding: 8px;
+      text-align: center;
+    }
+    th { background-color: var(--stat-bg); }
+    .stats {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 20px;
+    }
+    .stat-box {
+      flex: 1;
+      min-width: 140px;
+      border: 1px solid var(--border-color);
+      padding: 10px;
+      border-radius: 5px;
+      background-color: var(--stat-bg);
+    }
+    .settings { margin-top: 20px; }
+    .theme-toggle {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: var(--button-primary);
+      color: white;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+    }
+    .install-btn {
+      position: fixed;
+      top: 60px;
+      right: 10px;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: var(--button-success);
+      color: white;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      display: none;
+    }
+    @media (max-width: 600px) {
+      .stat-box { min-width: 100%; }
+      table { font-size: 14px; }
+      th, td { padding: 5px; }
+    }
+    @media (display-mode: standalone) {
+      body {
+        padding-top: 20px;
+      }
+    }
+  </style>
 </head>
 <body>
-  <button class="theme-toggle" id="theme-toggle">🌓</button>
-  <button class="install-btn" id="install-btn">📲</button>
+  <button class="theme-toggle" id="theme-toggle">🌓</button>
+  <button class="install-btn" id="install-btn">📲</button>
 
-  <div class="section">
-    <h2>Zeiterfassung</h2>
+  <div class="section">
+    <h2>Zeiterfassung</h2>
 
-    <div class="settings">
-      <label for="work-hours">Tägliche Sollstunden:</label>
-      <input type="number" id="work-hours" min="1" max="24" value="8">
+    <div class="settings">
+      <label for="work-hours">Tägliche Sollstunden:</label>
+      <input type="number" id="work-hours" min="1" max="24" value="8">
 
-      <label for="vacation-days-year">Jährliche Urlaubstage:</label>
-      <input type="number" id="vacation-days-year" min="1" max="365" value="24">
+      <label for="vacation-days-year">Jährliche Urlaubstage:</label>
+      <input type="number" id="vacation-days-year" min="1" max="365" value="24">
 
-      <label for="carryover-days">Resturlaub Vorjahr:</label>
-      <input type="number" id="carryover-days" min="0" value="0">
-    </div>
+      <label for="carryover-days">Resturlaub Vorjahr:</label>
+      <input type="number" id="carryover-days" min="0" value="0">
+    </div>
 
-    <div>
-      <label for="date">Datum:</label>
-      <input type="date" id="date">
-    </div>
-    <div>
-      <label for="start-time">Kommen:</label>
-      <input type="time" id="start-time" placeholder="z. B. 08:00" pattern="[0-9]{2}:[0-9]{2}">
-    </div>
-    <div>
-      <label for="end-time">Gehen:</label>
-      <input type="time" id="end-time" placeholder="z. B. 16:30" pattern="[0-9]{2}:[0-9]{2}">
-    </div>
-    <div>
-      <label for="break">Pause (Minuten):</label>
-      <input type="number" id="break" value="30" placeholder="z. B. 30" min="0" max="240">
-    </div>
-    <div>
-      <label for="type">Art:</label>
-      <select id="type">
-        <option value="Arbeit">Arbeit</option>
-        <option value="Urlaub">Urlaub</option>
-        <option value="Krank">Krank</option>
-        <option value="Feiertag">Feiertag</option>
-      </select>
-    </div>
-    <button id="add-entry-btn">Eintrag hinzufügen</button>
+    <div>
+      <label for="date">Datum:</label>
+      <input type="date" id="date">
+    </div>
+    <div>
+      <label for="start-time">Kommen:</label>
+      <input type="time" id="start-time" placeholder="z. B. 08:00" pattern="[0-9]{2}:[0-9]{2}">
+    </div>
+    <div>
+      <label for="end-time">Gehen:</label>
+      <input type="time" id="end-time" placeholder="z. B. 16:30" pattern="[0-9]{2}:[0-9]{2}">
+    </div>
+    <div>
+      <label for="break">Pause (Minuten):</label>
+      <input type="number" id="break" value="30" placeholder="z. B. 30" min="0" max="240">
+    </div>
+    <div>
+      <label for="type">Art:</label>
+      <select id="type">
+        <option value="Arbeit">Arbeit</option>
+        <option value="Urlaub">Urlaub</option>
+        <option value="Krank">Krank</option>
+        <option value="Feiertag">Feiertag</option>
+      </select>
+    </div>
+    <button id="add-entry-btn">Eintrag hinzufügen</button>
 
-    <div id="time-range" style="display: none;">
-      <label for="end-date">Bis Datum:</label>
-      <input type="date" id="end-date">
-      <button id="add-time-range-btn">Zeitraum hinzufügen</button>
-    </div>
+    <div id="time-range" style="display: none;">
+      <label for="end-date">Bis Datum:</label>
+      <input type="date" id="end-date">
+      <button id="add-time-range-btn">Zeitraum hinzufügen</button>
+    </div>
 
-    <div>
-      <label for="month">Monat anzeigen:</label>
-      <input type="month" id="month">
-    </div>
+    <div>
+      <label for="month">Monat anzeigen:</label>
+      <input type="month" id="month">
+    </div>
 
-    <h3 id="report-title">Monatsreport</h3>
-    <div style="overflow-x: auto;">
-      <table id="time-entries">
-        <thead>
-          <tr>
-            <th>Datum</th>
-            <th>Kommen</th>
-            <th>Gehen</th>
-            <th>Pause</th>
-            <th>Art</th>
-            <th>Stunden</th>
-            <th>Soll</th>
-            <th>Differenz</th>
-            <th>Aktion</th>
-          </tr>
-        </thead>
-        <tbody></tbody>
-      </table>
-    </div>
+    <h3 id="report-title">Monatsreport</h3>
+    <div style="overflow-x: auto;">
+      <table id="time-entries">
+        <thead>
+          <tr>
+            <th>Datum</th>
+            <th>Kommen</th>
+            <th>Gehen</th>
+            <th>Pause</th>
+            <th>Art</th>
+            <th>Stunden</th>
+            <th>Soll</th>
+            <th>Differenz</th>
+            <th>Aktion</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
 
-    <div class="stats">
-      <div class="stat-box">
-        <h4>Überstunden</h4>
-        <p id="overtime">0:00</p>
-      </div>
-      <div class="stat-box">
-        <h4>Urlaubstage</h4>
-        <p id="vacation-days">0 Tage (verfügbar: 24)</p>
-      </div>
-      <div class="stat-box">
-        <h4>Krankheitstage</h4>
-        <p id="sick-days">0 Tage</p>
-      </div>
-    </div>
+    <div class="stats">
+      <div class="stat-box">
+        <h4>Überstunden</h4>
+        <p id="overtime">0:00</p>
+      </div>
+      <div class="stat-box">
+        <h4>Urlaubstage</h4>
+        <p id="vacation-days">0 Tage (verfügbar: 24)</p>
+      </div>
+      <div class="stat-box">
+        <h4>Krankheitstage</h4>
+        <p id="sick-days">0 Tage</p>
+      </div>
+    </div>
 
-    <button id="export-csv-btn" class="secondary">CSV exportieren</button>
-    <button id="export-pdf-btn" class="secondary">PDF exportieren</button>
-    <button id="export-backup-btn" class="secondary">Backup speichern</button>
-    <button id="import-backup-btn">Backup laden</button>
-    <input type="file" id="import-file" style="display:none">
-  </div>
+    <button id="export-csv-btn" class="secondary">CSV exportieren</button>
+    <button id="export-pdf-btn" class="secondary">PDF exportieren</button>
+    <button id="export-backup-btn" class="secondary">Backup speichern</button>
+    <button id="import-backup-btn">Backup laden</button>
+    <input type="file" id="import-file" style="display:none">
+    <button id="reset-overtime-btn" class="delete">Überstunden zurücksetzen</button>
+  </div>
 
-  <script>
-    // IndexedDB für bessere Performance
+  <script>
+    // IndexedDB für bessere Performance
     const DB_NAME = 'TimeTrackingDB';
-    const DB_VERSION = 2; // Version erhöht für PWA
-    const STORE_NAME = 'timeEntries';
-    let db;
-    let timeEntries = [];
-    let backupTimestamps = JSON.parse(localStorage.getItem('backupTimestamps') || '[]');
-    let deferredPrompt;
-    let totalOvertimeMinutes = parseInt(localStorage.getItem('totalOvertimeMinutes') || 0);
+    const DB_VERSION = 2; // Version erhöht für PWA
+    const STORE_NAME = 'timeEntries';
+    let db;
+    let timeEntries = [];
+    let totalOvertimeMinutes = parseInt(localStorage.getItem('totalOvertimeMinutes') || 0);
+    const tbody = document.querySelector('#time-entries tbody');
+    const overtimeDisplay = document.getElementById('overtime');
+    const vacationDaysDisplay = document.getElementById('vacation-days');
+    const sickDaysDisplay = document.getElementById('sick-days');
+    const workHoursInput = document.getElementById('work-hours');
+    const vacationDaysYearInput = document.getElementById('vacation-days-year');
+    const carryoverDaysInput = document.getElementById('carryover-days');
+    const monthInput = document.getElementById('month');
+    const reportTitle = document.getElementById('report-title');
+    const timeRangeDiv = document.getElementById('time-range');
+    const addTimeRangeBtn = document.getElementById('add-time-range-btn');
+    const installBtn = document.getElementById('install-btn');
+    const backupTimestamps = JSON.parse(localStorage.getItem('backupTimestamps') || '[]');
+    const resetOvertimeBtn = document.getElementById('reset-overtime-btn');
 
-    // DOM-Elemente
-    const addEntryBtn = document.getElementById('add-entry-btn');
-    const exportCsvBtn = document.getElementById('export-csv-btn');
-    const exportPdfBtn = document.getElementById('export-pdf-btn');
-    const exportBackupBtn = document.getElementById('export-backup-btn');
-    const importBackupBtn = document.getElementById('import-backup-btn');
-    const importFile = document.getElementById('import-file');
-    const tbody = document.querySelector('#time-entries tbody');
-    const monthInput = document.getElementById('month');
-    const reportTitle = document.getElementById('report-title');
-    const themeToggle = document.getElementById('theme-toggle');
-    const typeSelect = document.getElementById('type');
-    const timeRangeDiv = document.getElementById('time-range');
-    const addTimeRangeBtn = document.getElementById('add-time-range-btn');
-    const workHoursInput = document.getElementById('work-hours');
-    const vacationDaysInput = document.getElementById('vacation-days-year');
-    const carryoverDaysInput = document.getElementById('carryover-days');
-    const installBtn = document.getElementById('install-btn');
-    const overtimeDisplay = document.getElementById('overtime');
-    const vacationDaysDisplay = document.getElementById('vacation-days');
-    const sickDaysDisplay = document.getElementById('sick-days');
+    // Datum auf heute setzen beim Laden
+    document.addEventListener('DOMContentLoaded', () => {
+      document.getElementById('date').valueAsDate = new Date();
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = String(now.getMonth() + 1).padStart(2, '0');
+      monthInput.value = `${year}-${month}`;
+      loadSettings();
+      openDatabase();
+      checkBackupReminder();
 
-    // Initialisierung
-    document.addEventListener('DOMContentLoaded', async () => {
-      await initDB();
-      const now = new Date();
-      document.getElementById('date').valueAsDate = now;
-      monthInput.value = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-      workHoursInput.value = localStorage.getItem('workHours') || 8;
-      vacationDaysInput.value = localStorage.getItem('vacationDays') || 24;
-      carryoverDaysInput.value = localStorage.getItem('carryoverDays') || 0;
-      loadEntries();
-      checkBackupReminder();
+      if (window.matchMedia('(display-mode: standalone)').matches) {
+        console.log('Läuft als Standalone-App');
+      }
 
-      // Theme aus localStorage laden
-      const savedTheme = localStorage.getItem('theme') || 'light';
-      document.documentElement.setAttribute('data-theme', savedTheme);
+      let deferredPrompt;
+      window.addEventListener('beforeinstallprompt', (e) => {
+        console.log('beforeinstallprompt Event wurde ausgelöst');
+        e.preventDefault();
+        deferredPrompt = e;
+        installBtn.style.display = 'flex';
 
-      // Install Button anzeigen, wenn PWA installierbar
-      window.addEventListener('beforeinstallprompt', (e) => {
-        e.preventDefault();
-        deferredPrompt = e;
-        installBtn.style.display = 'flex';
-      });
+        installBtn.addEventListener('click', () => {
+          deferredPrompt.prompt();
+          deferredPrompt.userChoice.then((choiceResult) => {
+            if (choiceResult.outcome === 'accepted') {
+              console.log('User accepted the A2HS prompt');
+            } else {
+              console.log('User dismissed the A2HS prompt');
+            }
+            deferredPrompt = null;
+            installBtn.style.display = 'none';
+          });
+        });
+      });
 
-      installBtn.addEventListener('click', async () => {
-        if (!deferredPrompt) return;
-        deferredPrompt.prompt();
-        const { outcome } = await deferredPrompt.userChoice;
-        if (outcome === 'accepted') {
-          installBtn.style.display = 'none';
-        }
-        deferredPrompt = null;
-      });
+      window.addEventListener('appinstalled', (evt) => {
+        console.log('PWA wurde installiert.');
+        installBtn.style.display = 'none';
+      });
+    });
 
-      // Prüfen ob im Standalone-Modus (installierte PWA)
-      if (window.matchMedia('(display-mode: standalone)').matches) {
-        console.log('Running as PWA');
-      }
+    // Datenbank öffnen oder erstellen
+    function openDatabase() {
+      const request = indexedDB.open(DB_NAME, DB_VERSION);
 
-      // Service Worker registrieren
-      if ('serviceWorker' in navigator) {
-        try {
-          await navigator.serviceWorker.register('sw.js');
-          console.log('Service Worker registriert');
-        } catch (error) {
-          console.error('Service Worker Registrierung fehlgeschlagen:', error);
-        }
-      }
-    });
+      request.onsuccess = (event) => {
+        db = event.target.result;
+        console.log('IndexedDB geöffnet');
+        loadEntries();
+      };
 
-    // Event Listener für Einstellungen
-    workHoursInput.addEventListener('change', function() {
-      localStorage.setItem('workHours', this.value);
-      loadEntries();
-    });
+      request.onupgradeneeded = (event) => {
+        const db = event.target.result;
+        if (!db.objectStoreNames.contains(STORE_NAME)) {
+          const store = db.createObjectStore(STORE_NAME, { keyPath: 'id', autoIncrement: true });
+          store.createIndex('date', 'date', { unique: false });
+          console.log('Object Store erstellt');
+        }
+      };
 
-    vacationDaysInput.addEventListener('change', function() {
-      localStorage.setItem('vacationDays', this.value);
-      loadEntries();
-    });
+      request.onerror = (event) => {
+        console.error('Fehler beim Öffnen der Datenbank:', event.target.error);
+        // Fallback zu localStorage, falls IndexedDB fehlschlägt
+        loadEntries();
+      };
+    }
 
-    carryoverDaysInput.addEventListener('change', function() {
-      localStorage.setItem('carryoverDays', this.value);
-      loadEntries();
-    });
+    // Einstellungen laden
+    function loadSettings() {
+      workHoursInput.value = localStorage.getItem('workHours') || '8';
+      vacationDaysYearInput.value = localStorage.getItem('vacationDays') || '24';
+      carryoverDaysInput.value = localStorage.getItem('carryoverDays') || '0';
+      const savedTheme = localStorage.getItem('theme');
+      if (savedTheme) {
+        document.documentElement.setAttribute('data-theme', savedTheme);
+        if (savedTheme === 'dark') {
+          document.getElementById('theme-toggle').textContent = '☀️';
+        }
+      }
+    }
 
-    // Event Listener
-    addEntryBtn.addEventListener('click', addTimeEntry);
-    exportCsvBtn.addEventListener('click', exportCSV);
-    exportPdfBtn.addEventListener('click', exportPDF);
-    exportBackupBtn.addEventListener('click', exportBackup);
-    importBackupBtn.addEventListener('click', () => importFile.click());
-    importFile.addEventListener('change', handleImport);
-    monthInput.addEventListener('change', loadEntries);
-    themeToggle.addEventListener('click', toggleTheme);
-    typeSelect.addEventListener('change', (e) => {
-      const showRange = ['Urlaub', 'Krank', 'Feiertag'].includes(e.target.value);
-      timeRangeDiv.style.display = showRange ? 'block' : 'none';
-    });
-    addTimeRangeBtn.addEventListener('click', addTimeRange);
+    // Einstellungen speichern
+    function saveSettings() {
+      localStorage.setItem('workHours', workHoursInput.value);
+      localStorage.setItem('vacationDays', vacationDaysYearInput.value);
+      localStorage.setItem('carryoverDays', carryoverDaysInput.value);
+      loadEntries(); // Nach dem Speichern neu laden, um Urlaubstage zu aktualisieren
+    }
 
-    // IndexedDB Initialisierung
-    function initDB() {
-      return new Promise((resolve, reject) => {
-        const request = indexedDB.open(DB_NAME, DB_VERSION);
+    // Eintrag in IndexedDB speichern
+    async function saveEntry(entry) {
+      if (!db) {
+        // Fallback zu localStorage
+        entry.id = Date.now();
+        timeEntries.push(entry);
+        localStorage.setItem('timeEntries', JSON.stringify(timeEntries));
+        return Promise.resolve();
+      }
 
-        request.onupgradeneeded = (event) => {
-          db = event.target.result;
-          if (!db.objectStoreNames.contains(STORE_NAME)) {
-            db.createObjectStore(STORE_NAME, { keyPath: 'id', autoIncrement: true });
-          }
-        };
+      return new Promise((resolve, reject) => {
+        const transaction = db.transaction([STORE_NAME], 'readwrite');
+        const store = transaction.objectStore(STORE_NAME);
+        const request = store.add(entry);
 
-        request.onsuccess = (event) => {
-          db = event.target.result;
-          resolve();
-        };
+        request.onsuccess = () => {
+          resolve();
+        };
 
-        request.onerror = (event) => {
-          console.error('IndexedDB error:', event.target.error);
-          // Fallback zu localStorage
-          timeEntries = JSON.parse(localStorage.getItem('timeEntries') || '[]');
-          totalOvertimeMinutes = parseInt(localStorage.getItem('totalOvertimeMinutes') || 0);
-          resolve();
-        };
-      });
-    }
-
-   // Daten in IndexedDB speichern
-function saveEntry(entry) {
-  return new Promise((resolve, reject) => {
-    if (!db) {
-      // Fallback zu localStorage
-      timeEntries.push(entry);
-      localStorage.setItem('timeEntries', JSON.stringify(timeEntries));
-      localStorage.setItem('totalOvertimeMinutes', totalOvertimeMinutes);
-      resolve();
-      return;
-    }
-
-    const transaction = db.transaction([STORE_NAME], 'readwrite');
-    const store = transaction.objectStore(STORE_NAME);
-    const request = store.add(entry);
-
-    request.onsuccess = () => resolve();
-    request.onerror = (event) => {
-      console.error('Error saving entry:', event.target.error);
-      reject(event.target.error);
-    };
-  });
-}
+        request.onerror = (event) => {
+          console.error('Error saving entry:', event.target.error);
+          reject(event.target.error);
+        };
+      });
+    }
     // Daten aus IndexedDB laden
-    function loadEntries() {
-      const selectedMonth = monthInput.value;
-      const [year, month] = selectedMonth.split("-");
-      const monthNames = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni',
-                         'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'];
-      reportTitle.textContent = `Monatsreport ${monthNames[parseInt(month)-1]} ${year}`;
+    function loadEntries() {
+      const selectedMonth = monthInput.value;
+      const [year, month] = selectedMonth.split("-");
+      const monthNames = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni',
+                         'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'];
+      reportTitle.textContent = `Monatsreport ${monthNames[parseInt(month)-1]} ${year}`;
 
-      if (!db) {
-        // Fallback zu localStorage
-        timeEntries = JSON.parse(localStorage.getItem('timeEntries') || '[]');
-        totalOvertimeMinutes = parseInt(localStorage.getItem('totalOvertimeMinutes') || 0);
-        // Einträge nach Datum sortieren
-        timeEntries.sort((a, b) => new Date(a.date) - new Date(b.date));
-        renderEntries(year);
-        return;
-      }
+      if (!db) {
+        // Fallback zu localStorage
+        timeEntries = JSON.parse(localStorage.getItem('timeEntries') || '[]');
+        totalOvertimeMinutes = parseInt(localStorage.getItem('totalOvertimeMinutes') || 0);
+        // Einträge nach Datum sortieren
+        timeEntries.sort((a, b) => new Date(a.date) - new Date(b.date));
+        renderEntries(year);
+        return;
+      }
 
-      const transaction = db.transaction([STORE_NAME], 'readonly');
-      const store = transaction.objectStore(STORE_NAME);
-      const request = store.getAll();
+      const transaction = db.transaction([STORE_NAME], 'readonly');
+      const store = transaction.objectStore(STORE_NAME);
+      const request = store.getAll();
 
-      request.onsuccess = (event) => {
-        timeEntries = event.target.result || [];
-        // Einträge nach Datum sortieren
-        timeEntries.sort((a, b) => new Date(a.date) - new Date(b.date));
-        renderEntries(year);
-      };
+      request.onsuccess = (event) => {
+        timeEntries = event.target.result || [];
+        // Einträge nach Datum sortieren
+        timeEntries.sort((a, b) => new Date(a.date) - new Date(b.date));
+        renderEntries(year);
+      };
 
-      request.onerror = (event) => {
-        console.error('Error loading entries:', event.target.error);
-        timeEntries = JSON.parse(localStorage.getItem('timeEntries') || '[]');
-        totalOvertimeMinutes = parseInt(localStorage.getItem('totalOvertimeMinutes') || 0);
-        // Einträge nach Datum sortieren
-        timeEntries.sort((a, b) => new Date(a.date) - new Date(b.date));
-        renderEntries(year);
-      };
-    }
+      request.onerror = (event) => {
+        console.error('Error loading entries:', event.target.error);
+        timeEntries = JSON.parse(localStorage.getItem('timeEntries') || '[]');
+        totalOvertimeMinutes = parseInt(localStorage.getItem('totalOvertimeMinutes') || 0);
+        // Einträge nach Datum sortieren
+        timeEntries.sort((a, b) => new Date(a.date) - new Date(b.date));
+        renderEntries(year);
+      };
+    }
 
-    // Einträge rendern
-    function renderEntries(currentYear) {
-      tbody.innerHTML = '';
-      let monthlyOvertimeMinutes = 0;
-      let vacationDaysTaken = 0;
-      let sickDaysTaken = 0;
-      let holidayDaysTaken = 0;
+    // Einträge rendern
+    function renderEntries(currentYear) {
+      tbody.innerHTML = '';
+      let monthlyOvertimeMinutes = 0;
+      let vacationDaysTaken = 0;
+      let sickDaysTaken = 0;
+      let holidayDaysTaken = 0;
 
-      const selectedMonth = monthInput.value;
-      const entries = timeEntries
-        .filter(e => e.date && e.date.startsWith(selectedMonth))
-        .sort((a, b) => new Date(a.date) - new Date(b.date));
+      const selectedMonth = monthInput.value;
+      const entries = timeEntries
+        .filter(e => e.date && e.date.startsWith(selectedMonth))
+        .sort((a, b) => new Date(a.date) - new Date(b.date));
 
-      const annualVacationDays = parseInt(localStorage.getItem('vacationDays') || 24);
-      const carryoverDays = parseInt(localStorage.getItem('carryoverDays') || 0);
-      let availableVacationDays = annualVacationDays + carryoverDays;
+      const annualVacationDays = parseInt(localStorage.getItem('vacationDays') || 24);
+      const carryoverDays = parseInt(localStorage.getItem('carryoverDays') || 0);
+      let availableVacationDays = annualVacationDays + carryoverDays;
 
-      // Jahresübergreifende Urlaubstage zählen
-      timeEntries.forEach(entry => {
-        if (entry.type === 'Urlaub') {
-          vacationDaysTaken++;
-        } else if (entry.type === 'Krank') {
-          sickDaysTaken++;
-        } else if (entry.type === 'Feiertag') {
-          holidayDaysTaken++;
-        }
-      });
+      // Jahresübergreifende Urlaubstage zählen
+      timeEntries.forEach(entry => {
+        if (entry.type === 'Urlaub') {
+          vacationDaysTaken++;
+        } else if (entry.type === 'Krank') {
+          sickDaysTaken++;
+        } else if (entry.type === 'Feiertag') {
+          holidayDaysTaken++;
+        }
+      });
 
-      entries.forEach(entry => {
-        const row = tbody.insertRow();
-        row.insertCell(0).textContent = formatDate(entry.date);
-        row.insertCell(1).textContent = entry.type === 'Arbeit' ? entry.start || '-' : '-';
-        row.insertCell(2).textContent = entry.type === 'Arbeit' ? entry.end || '-' : '-';
-        row.insertCell(3).textContent = entry.type === 'Arbeit' ? entry.pause || 0 : '-';
-        row.insertCell(4).textContent = entry.type;
-        row.insertCell(5).textContent = entry.hours || '0:00';
+      entries.forEach(entry => {
+        const row = tbody.insertRow();
+        row.insertCell(0).textContent = formatDate(entry.date);
+        row.insertCell(1).textContent = entry.type === 'Arbeit' ? entry.start || '-' : '-';
+        row.insertCell(2).textContent = entry.type === 'Arbeit' ? entry.end || '-' : '-';
+        row.insertCell(3).textContent = entry.type === 'Arbeit' ? entry.pause || 0 : '-';
+        row.insertCell(4).textContent = entry.type;
+        row.insertCell(5).textContent = entry.hours || '0:00';
 
-        let istMin = 0;
-        if (entry.type === 'Arbeit') {
-          const [h, m] = (entry.hours || '0:00').split(":").map(Number);
-          istMin = h * 60 + m;
-          const sollMin = entry.sollHours ? entry.sollHours * 60 : parseFloat(localStorage.getItem('workHours') || 8) * 60;
-          monthlyOvertimeMinutes += istMin - sollMin;
-        }
+        let istMin = 0;
+        if (entry.type === 'Arbeit') {
+          const [h, m] = (entry.hours || '0:00').split(":").map(Number);
+          istMin = h * 60 + m;
+          const sollMin = entry.sollHours ? entry.sollHours * 60 : parseFloat(localStorage.getItem('workHours') || 8) * 60;
+          monthlyOvertimeMinutes += istMin - sollMin;
+        }
 
-        const sollHours = entry.sollHours ? entry.sollHours : parseFloat(localStorage.getItem('workHours') || 8);
-        row.insertCell(6).textContent = entry.type === 'Arbeit'
-          ? `${Math.floor(sollHours)}:${String(Math.round((sollHours % 1) * 60)).padStart(2, '0')}`
-          : '-';
+        const sollHours = entry.sollHours ? entry.sollHours : parseFloat(localStorage.getItem('workHours') || 8);
+        row.insertCell(6).textContent = entry.type === 'Arbeit'
+          ? `${Math.floor(sollHours)}:${String(Math.round((sollHours % 1) * 60)).padStart(2, '0')}`
+          : '-';
 
-        let diff = istMin - (sollHours * 60);
-        row.insertCell(7).textContent = entry.type === 'Arbeit'
-          ? `${diff < 0 ? '-' : ''}${Math.floor(Math.abs(diff) / 60)}:${String(Math.abs(diff) % 60).padStart(2, '0')}`
-          : '-';
+        let diff = istMin - (sollHours * 60);
+        row.insertCell(7).textContent = entry.type === 'Arbeit'
+          ? `${diff < 0 ? '-' : ''}${Math.floor(Math.abs(diff) / 60)}:${String(Math.abs(diff) % 60).padStart(2, '0')}`
+          : '-';
 
-        const deleteBtn = document.createElement('button');
-        deleteBtn.textContent = 'Löschen';
-        deleteBtn.className = 'delete';
-        deleteBtn.onclick = () => deleteEntry(entry.id);
-        row.insertCell(8).appendChild(deleteBtn);
-      });
+        const deleteBtn = document.createElement('button');
+        deleteBtn.textContent = 'Löschen';
+        deleteBtn.className = 'delete';
+        deleteBtn.onclick = () => deleteEntry(entry.id);
+        row.insertCell(8).appendChild(deleteBtn);
+      });
 
-      // Gesamtüberstunden aktualisieren
-      totalOvertimeMinutes += monthlyOvertimeMinutes;
-      localStorage.setItem('totalOvertimeMinutes', totalOvertimeMinutes);
-      updateStats(totalOvertimeMinutes, vacationDaysTaken, annualVacationDays + carryoverDays, sickDaysTaken);
-    }
+      // Gesamtüberstunden aktualisieren
+      totalOvertimeMinutes += monthlyOvertimeMinutes;
+      localStorage.setItem('totalOvertimeMinutes', totalOvertimeMinutes);
+      updateStats(totalOvertimeMinutes, vacationDaysTaken, annualVacationDays + carryoverDays, sickDaysTaken);
+    }
 
-    // Eintrag löschen
-    function deleteEntry(id) {
-      if (!confirm("Eintrag wirklich löschen?")) return;
+    // Eintrag löschen
+    function deleteEntry(id) {
+      if (!confirm("Eintrag wirklich löschen?")) return;
 
-      if (!db) {
-        // Fallback zu localStorage
-        const deletedEntry = timeEntries.find(e => e.id === id);
-        if (deletedEntry && deletedEntry.type === 'Arbeit' && deletedEntry.hours) {
-          const [h, m] = deletedEntry.hours.split(':').map(Number);
-          totalOvertimeMinutes -= (h * 60 + m) - (deletedEntry.sollHours ? deletedEntry.sollHours * 60 : parseFloat(localStorage.getItem('workHours') || 8) * 60);
-          localStorage.setItem('totalOvertimeMinutes', totalOvertimeMinutes);
-        }
-        timeEntries = timeEntries.filter(e => e.id !== id);
-        localStorage.setItem('timeEntries', JSON.stringify(timeEntries));
-        loadEntries();
-        return;
-      }
+      if (!db) {
+        // Fallback zu localStorage
+        const deletedEntry = timeEntries.find(e => e.id === id);
+        if (deletedEntry && deletedEntry.type === 'Arbeit' && deletedEntry.hours) {
+          const [h, m] = deletedEntry.hours.split(':').map(Number);
+          totalOvertimeMinutes -= (h * 60 + m) - (deletedEntry.sollHours ? deletedEntry.sollHours * 60 : parseFloat(localStorage.getItem('workHours') || 8) * 60);
+          localStorage.setItem('totalOvertimeMinutes', totalOvertimeMinutes);
+        }
+        timeEntries = timeEntries.filter(e => e.id !== id);
+        localStorage.setItem('timeEntries', JSON.stringify(timeEntries));
+        loadEntries();
+        return;
+      }
 
-      const transaction = db.transaction([STORE_NAME], 'readwrite');
+      const transaction = db.transaction([STORE_NAME], 'readwrite');
       const store = transaction.objectStore(STORE_NAME);
       const getRequest = store.get(id);
 
@@ -560,131 +536,131 @@ function saveEntry(entry) {
       getRequest.onerror = (event) => {
         console.error('Error getting entry for deletion:', event.target.error);
       };
-    }
+    }
 
-    // Eintrag hinzufügen
-    async function addTimeEntry() {
-      const date = document.getElementById('date').value;
-      const start = document.getElementById('start-time').value;
-      const end = document.getElementById('end-time').value;
-      const pause = parseInt(document.getElementById('break').value) || 0;
-      const type = document.getElementById('type').value;
-      const sollHours = parseFloat(workHoursInput.value);
+    // Eintrag hinzufügen
+    async function addTimeEntry() {
+      const date = document.getElementById('date').value;
+      const start = document.getElementById('start-time').value;
+      const end = document.getElementById('end-time').value;
+      const pause = parseInt(document.getElementById('break').value) || 0;
+      const type = document.getElementById('type').value;
+      const sollHours = parseFloat(workHoursInput.value);
 
-      if (!date) {
-        alert('Bitte Datum ausfüllen.');
-        return;
-      }
+      if (!date) {
+        alert('Bitte Datum ausfüllen.');
+        return;
+      }
 
-      // Prüfen auf doppelten Eintrag
-      const existingEntry = timeEntries.find(e => e.date === date);
-      if (existingEntry) {
-        if (!confirm("Für dieses Datum existiert bereits ein Eintrag. Überschreiben?")) return;
-        await deleteEntry(existingEntry.id);
-      }
+      // Prüfen auf doppelten Eintrag
+      const existingEntry = timeEntries.find(e => e.date === date);
+      if (existingEntry) {
+        if (!confirm("Für dieses Datum existiert bereits ein Eintrag. Überschreiben?")) return;
+        await deleteEntry(existingEntry.id);
+      }
 
-      // Validierung der Zeiten
-      if (type === 'Arbeit') {
-        if (!start || !end) {
-          alert('Bitte Start- und Endzeit für Arbeitstage ausfüllen.');
-          return;
-        }
+      // Validierung der Zeiten
+      if (type === 'Arbeit') {
+        if (!start || !end) {
+          alert('Bitte Start- und Endzeit für Arbeitstage ausfüllen.');
+          return;
+        }
 
-        if (!isValidTime(start) || !isValidTime(end)) {
-          alert('Ungültige Zeitangabe. Bitte im Format HH:MM eingeben (z.B. 08:30).');
-          return;
-        }
+        if (!isValidTime(start) || !isValidTime(end)) {
+          alert('Ungültige Zeitangabe. Bitte im Format HH:MM eingeben (z.B. 08:30).');
+          return;
+        }
 
-        const startDate = new Date(`${date}T${start}`);
-        const endDate = new Date(`${date}T${end}`);
-        const diff = (endDate - startDate) / 60000 - pause;
+        const startDate = new Date(`${date}T${start}`);
+        const endDate = new Date(`${date}T${end}`);
+        const diff = (endDate - startDate) / 60000 - pause;
 
-        if (diff <= 0) {
-          alert('Endzeit muss nach Startzeit liegen.');
-          return;
-        }
+        if (diff <= 0) {
+          alert('Endzeit muss nach Startzeit liegen.');
+          return;
+        }
 
-        if (diff > 16 * 60) {
-          if (!confirm(`Arbeitszeit von ${Math.floor(diff/60)} Stunden und ${Math.round(diff%60)} Minuten ist sehr lang. Trotzdem speichern?`)) {
-            return;
-          }
-        }
-      }
+        if (diff > 16 * 60) {
+          if (!confirm(`Arbeitszeit von ${Math.floor(diff/60)} Stunden und ${Math.round(diff%60)} Minuten ist sehr lang. Trotzdem speichern?`)) {
+            return;
+          }
+        }
+      }
 
-      if (pause < 0 || pause > 240) {
-        alert('Pausenzeit muss zwischen 0 und 240 Minuten liegen.');
-        return;
-      }
+      if (pause < 0 || pause > 240) {
+        alert('Pausenzeit muss zwischen 0 und 240 Minuten liegen.');
+        return;
+      }
 
-      const entry = {
-        date,
-        type,
-        hours: '0:00',
+      const entry = {
+        date,
+        type,
+        hours: '0:00',
         pause: type === 'Arbeit' ? pause : 0,
-        sollHours: sollHours
-      };
+        sollHours: sollHours
+      };
 
-      if (type === 'Arbeit') {
-        const startDate = new Date(`${date}T${start}`);
-        const endDate = new Date(`${date}T${end}`);
-        const diff = (endDate - startDate) / 60000 - pause;
-        const h = Math.floor(diff / 60);
-        const m = Math.round(diff % 60);
-        entry.hours = `${h}:${m.toString().padStart(2, '0')}`;
-        entry.start = start;
-        entry.end = end;
-      }
+      if (type === 'Arbeit') {
+        const startDate = new Date(`${date}T${start}`);
+        const endDate = new Date(`${date}T${end}`);
+        const diff = (endDate - startDate) / 60000 - pause;
+        const h = Math.floor(diff / 60);
+        const m = Math.round(diff % 60);
+        entry.hours = `${h}:${m.toString().padStart(2, '0')}`;
+        entry.start = start;
+        entry.end = end;
+      }
 
-      try {
-        await saveEntry(entry);
-        // Nach dem Speichern die Einträge neu laden und sortieren
-        loadEntries();
-        resetForm();
-      } catch (error) {
-        alert('Fehler beim Speichern: ' + error.message);
-      }
-    }
+      try {
+        await saveEntry(entry);
+        // Nach dem Speichern die Einträge neu laden und sortieren
+        loadEntries();
+        resetForm();
+      } catch (error) {
+        alert('Fehler beim Speichern: ' + error.message);
+      }
+    }
 
-    // Zeitraum hinzufügen (für Urlaub/Krank/Feiertag)
-    async function addTimeRange() {
-      const startDate = document.getElementById('date').value;
-      const endDate = document.getElementById('end-date').value;
-      const type = document.getElementById('type').value;
+    // Zeitraum hinzufügen (für Urlaub/Krank/Feiertag)
+    async function addTimeRange() {
+      const startDate = document.getElementById('date').value;
+      const endDate = document.getElementById('end-date').value;
+      const type = document.getElementById('type').value;
 
-      if (!startDate || !endDate) {
-        alert('Bitte Start- und Enddatum ausfüllen.');
-        return;
-      }
+      if (!startDate || !endDate) {
+        alert('Bitte Start- und Enddatum ausfüllen.');
+        return;
+      }
 
-      if (new Date(endDate) < new Date(startDate)) {
-        alert('Enddatum muss nach Startdatum liegen.');
-        return;
-      }
+      if (new Date(endDate) < new Date(startDate)) {
+        alert('Enddatum muss nach Startdatum liegen.');
+        return;
+      }
 
-      if (!confirm(`${type}-Zeitraum vom ${formatDate(startDate)} bis ${formatDate(endDate)} hinzufügen?`)) {
-        return;
-      }
+      if (!confirm(`${type}-Zeitraum vom ${formatDate(startDate)} bis ${formatDate(endDate)} hinzufügen?`)) {
+        return;
+      }
 
-      const currentDate = new Date(startDate);
-      const end = new Date(endDate);
+      const currentDate = new Date(startDate);
+      const end = new Date(endDate);
 
-      // Prüfen auf bestehende Einträge im Zeitraum
-      const existingEntries = timeEntries.filter(e => {
-        const entryDate = new Date(e.date);
-        return entryDate >= currentDate && entryDate <= end;
-      });
+      // Prüfen auf bestehende Einträge im Zeitraum
+      const existingEntries = timeEntries.filter(e => {
+        const entryDate = new Date(e.date);
+        return entryDate >= currentDate && entryDate <= end;
+      });
 
-      if (existingEntries.length > 0) {
-        if (!confirm(`${existingEntries.length} bestehende Einträge im Zeitraum werden überschrieben. Fortfahren?`)) {
-          return;
-        }
-        // Lösche bestehende Einträge
-        for (const entry of existingEntries) {
-          await deleteEntry(entry.id);
-        }
-      }
+      if (existingEntries.length > 0) {
+        if (!confirm(`${existingEntries.length} bestehende Einträge im Zeitraum werden überschrieben. Fortfahren?`)) {
+          return;
+        }
+        // Lösche bestehende Einträge
+        for (const entry of existingEntries) {
+          await deleteEntry(entry.id);
+        }
+      }
 
-      for (const entry of existingEntries) {
+      for (const entry of existingEntries) {
         try {
           await deleteEntry(entry.id);
         } catch (error) {
@@ -716,51 +692,51 @@ function saveEntry(entry) {
         currentDate.setDate(currentDate.getDate() + 1);
       }
 
-      // Nach dem Hinzufügen des Zeitraums die Einträge neu laden und sortieren
-      loadEntries();
-      resetForm();
-      timeRangeDiv.style.display = 'none';
-    }
+      // Nach dem Hinzufügen des Zeitraums die Einträge neu laden und sortieren
+      loadEntries();
+      resetForm();
+      timeRangeDiv.style.display = 'none';
+    }
 
-    // Formular zurücksetzen
-    function resetForm() {
-      document.getElementById('start-time').value = '';
-      document.getElementById('end-time').value = '';
-      document.getElementById('break').value = '30';
-      const nextDay = new Date(new Date(document.getElementById('date').value).getTime() + 86400000);
-      document.getElementById('date').valueAsDate = new Date(nextDay);
-      document.getElementById('end-date').value = '';
-    }
+    // Formular zurücksetzen
+    function resetForm() {
+      document.getElementById('start-time').value = '';
+      document.getElementById('end-time').value = '';
+      document.getElementById('break').value = '30';
+      const nextDay = new Date(new Date(document.getElementById('date').value).getTime() + 86400000);
+      document.getElementById('date').valueAsDate = new Date(nextDay);
+      document.getElementById('end-date').value = '';
+    }
 
-    // Statistik aktualisieren
-    function updateStats(overtimeMinutes, vacationTaken, vacationTotal, sickDays) {
-      const oh = Math.floor(Math.abs(overtimeMinutes) / 60);
-      const om = Math.abs(overtimeMinutes) % 60;
-      const sign = overtimeMinutes < 0 ? "-" : "";
-      overtimeDisplay.textContent = `${sign}${oh}:${String(om).padStart(2, '0')}`;
+    // Statistik aktualisieren
+    function updateStats(overtimeMinutes, vacationTaken, vacationTotal, sickDays) {
+      const oh = Math.floor(Math.abs(overtimeMinutes) / 60);
+      const om = Math.abs(overtimeMinutes) % 60;
+      const sign = overtimeMinutes < 0 ? "-" : "";
+      overtimeDisplay.textContent = `${sign}${oh}:${String(om).padStart(2, '0')}`;
 
-      const remainingVacation = vacationTotal - vacationTaken;
-      vacationDaysDisplay.textContent = `${vacationTaken} Tage (verfügbar: ${remainingVacation})`;
+      const remainingVacation = vacationTotal - vacationTaken;
+      vacationDaysDisplay.textContent = `${vacationTaken} Tage (verfügbar: ${remainingVacation})`;
 
-      sickDaysDisplay.textContent = `${sickDays} Tage`;
-    }
+      sickDaysDisplay.textContent = `${sickDays} Tage`;
+    }
 
-    // Theme umschalten
-    function toggleTheme() {
-      const currentTheme = document.documentElement.getAttribute('data-theme') || 'light';
-      const newTheme = currentTheme === 'light' ? 'dark' : 'light';
-      document.documentElement.setAttribute('data-theme', newTheme);
-      localStorage.setItem('theme', newTheme);
-    }
+    // Theme umschalten
+    function toggleTheme() {
+      const currentTheme = document.documentElement.getAttribute('data-theme') || 'light';
+      const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+      document.documentElement.setAttribute('data-theme', newTheme);
+      localStorage.setItem('theme', newTheme);
+    }
 
-    // CSV Export
-    function exportCSV() {
-      const selectedMonth = monthInput.value;
-      const [year, month] = selectedMonth.split("-");
-      const monthNames = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni',
-                         'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'];
+    // CSV Export
+    function exportCSV() {
+      const selectedMonth = monthInput.value;
+      const [year, month] = selectedMonth.split("-");
+      const monthNames = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni',
+                         'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'];
 
-      // Einträge filtern und nach Datum sortieren
+      // Einträge filtern und nach Datum sortieren
       const entries = timeEntries
         .filter(e => e.date && e.date.startsWith(selectedMonth))
         .sort((a, b) => new Date(a.date) - new Date(b.date));
@@ -796,219 +772,258 @@ function saveEntry(entry) {
 
       download(`Monatsreport_${monthNames[parseInt(month)-1]}_${year}.csv`, csv, 'text/csv');
     }
-    
-    // PDF Export
-    function exportPDF() {
-      const selectedMonth = monthInput.value;
-      const [year, month] = selectedMonth.split("-");
-      const monthNames = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni',
-                         'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'];
 
-      // Einträge filtern und nach Datum sortieren
-      const entries = timeEntries
-        .filter(e => e.date && e.date.startsWith(selectedMonth))
-        .sort((a, b) => new Date(a.date) - new Date(b.date));
+    // PDF Export
+    function exportPDF() {
+      const selectedMonth = monthInput.value;
+      const [year, month] = selectedMonth.split("-");
+      const monthNames = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni',
+                         'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'];
 
-      if (entries.length === 0) {
-        alert('Keine Einträge für den ausgewählten Monat vorhanden!');
-        return;
-      }
+      // Einträge filtern und nach Datum sortieren
+      const entries = timeEntries
+        .filter(e => e.date && e.date.startsWith(selectedMonth))
+        .sort((a, b) => new Date(a.date) - new Date(b.date));
 
-      try {
-        const doc = new window.jspdf.jsPDF('portrait');
+      if (entries.length === 0) {
+        alert('Keine Einträge für den ausgewählten Monat vorhanden!');
+        return;
+      }
 
-        // Titel
-        doc.setFontSize(16);
-        doc.text(`Monatsreport ${monthNames[parseInt(month)-1]} ${year}`, 105, 15, { align: 'center' });
+      try {
+        const doc = new window.jspdf.jsPDF('portrait');
 
-        // Tabellenkopf
-        const headers = ["Datum", "Kommen", "Gehen", "Pause", "Art", "Stunden", "Sollstunden", "Differenz"];
-        let data = [];
+        // Titel
+        doc.setFontSize(16);
+        doc.text(`Monatsreport ${monthNames[parseInt(month)-1]} ${year}`, 105, 15, { align: 'center' });
 
-        // Tabellendaten
-        entries.forEach(e => {
-          const sollHours = e.type === 'Arbeit' ? (e.sollHours ? e.sollHours : parseFloat(localStorage.getItem('workHours') || 8)) : '';
-          let diff = '';
+        // Tabellenkopf
+        const headers = ["Datum", "Kommen", "Gehen", "Pause", "Art", "Stunden", "Sollstunden", "Differenz"];
+        let data = [];
 
-          if (e.type === 'Arbeit') {
-            const [h, m] = (e.hours || '0:00').split(":").map(Number);
-            const istMin = h * 60 + m;
-            const sollMin = sollHours * 60;
-            const diffMin = istMin - sollMin;
+        // Tabellendaten
+        entries.forEach(e => {
+          const sollHours = e.type === 'Arbeit' ? (e.sollHours ? e.sollHours : parseFloat(localStorage.getItem('workHours') || 8)) : '';
+          let diff = '';
+
+          if (e.type === 'Arbeit') {
+            const [h, m] = (e.hours || '0:00').split(":").map(Number);
+            const istMin = h * 60 + m;
+            const sollMin = sollHours * 60;
+            const diffMin = istMin - sollMin
             const sign = diffMin < 0 ? '-' : '';
-            diff = `${sign}${Math.floor(Math.abs(diffMin) / 60)}:${String(Math.abs(diffMin) % 60).padStart(2, '0')}`;
-          }
+            diff = `${sign}${Math.floor(Math.abs(diffMin) / 60)}:${String(Math.abs(diffMin) % 60).padStart(2, '0')}`;
+          }
 
-          data.push([
-            formatDate(e.date),
-            e.type === 'Arbeit' ? e.start || '-' : '-',
-            e.type === 'Arbeit' ? e.end || '-' : '-',
-            e.type === 'Arbeit' ? e.pause || '0' : '-',
-            e.type,
-            e.hours || '0:00',
-            sollHours === '' ? '' : `${Math.floor(sollHours)}:${String(Math.round((sollHours % 1) * 60)).padStart(2, '0')}`,
-            diff
-          ]);
-        });
+          data.push([
+            formatDate(e.date),
+            e.type === 'Arbeit' ? e.start || '-' : '-',
+            e.type === 'Arbeit' ? e.end || '-' : '-',
+            e.type === 'Arbeit' ? e.pause || '0' : '-',
+            e.type,
+            e.hours || '0:00',
+            sollHours === '' ? '' : `${Math.floor(sollHours)}:${String(Math.round((sollHours % 1) * 60)).padStart(2, '0')}`,
+            diff
+          ]);
+        });
 
-        // Tabelle einfügen
-        doc.autoTable({
-          head: [headers],
-          body: data,
-          startY: 25,
-          margin: { horizontal: 10 },
-          styles: {
-            fontSize: 8,
-            cellPadding: 2,
-            overflow: 'linebreak'
-          },
-          headStyles: {
-            fillColor: [52, 152, 219],
-            textColor: 255
-          }
-        });
+        // Tabelle einfügen
+        doc.autoTable({
+          head: [headers],
+          body: data,
+          startY: 25,
+          margin: { horizontal: 10 },
+          styles: {
+            fontSize: 8,
+            cellPadding: 2,
+            overflow: 'linebreak'
+          },
+          headStyles: {
+            fillColor: [52, 152, 219],
+            textColor: 255
+          }
+        });
 
-        // Statistiken hinzufügen
-        const finalY = doc.lastAutoTable.finalY + 15;
-        doc.setFontSize(12);
-        const oh = Math.floor(Math.abs(totalOvertimeMinutes) / 60);
-        const om = Math.abs(totalOvertimeMinutes) % 60;
-        const sign = totalOvertimeMinutes < 0 ? "-" : "";
-        const vacationTotal = parseInt(localStorage.getItem('vacationDays') || 24) + parseInt(localStorage.getItem('carryoverDays') || 0);
-        const vacationTaken = timeEntries.filter(e => e.type === 'Urlaub').length;
-        const sickDays = timeEntries.filter(e => e.type === 'Krank').length;
+        // Statistiken hinzufügen
+        const finalY = doc.lastAutoTable.finalY + 15;
+        doc.setFontSize(12);
+        const oh = Math.floor(Math.abs(totalOvertimeMinutes) / 60);
+        const om = Math.abs(totalOvertimeMinutes) % 60;
+        const sign = totalOvertimeMinutes < 0 ? "-" : "";
+        const vacationTotal = parseInt(localStorage.getItem('vacationDays') || 24) + parseInt(localStorage.getItem('carryoverDays') || 0);
+        const vacationTaken = timeEntries.filter(e => e.type === 'Urlaub').length;
+        const sickDays = timeEntries.filter(e => e.type === 'Krank').length;
 
-        doc.text(`Überstunden: ${sign}${oh}:${String(om).padStart(2, '0')}`, 14, finalY);
-        doc.text(`Urlaubstage (genommen/verfügbar): ${vacationTaken}/${vacationTotal}`, 14, finalY + 10);
-        doc.text(`Krankheitstage: ${sickDays}`, 14, finalY + 20);
+        doc.text(`Überstunden: ${sign}${oh}:${String(om).padStart(2, '0')}`, 14, finalY);
+        doc.text(`Urlaubstage (genommen/verfügbar): ${vacationTaken}/${vacationTotal}`, 14, finalY + 10);
+        doc.text(`Krankheitstage: ${sickDays}`, 14, finalY + 20);
 
-        // PDF speichern
-        doc.save(`Monatsreport_${monthNames[parseInt(month)-1]}_${year}.pdf`);
+        // PDF speichern
+        doc.save(`Monatsreport_${monthNames[parseInt(month)-1]}_${year}.pdf`);
 
-      } catch (error) {
-        console.error('PDF-Export fehlgeschlagen:', error);
-        alert('Fehler beim PDF-Export: ' + error.message);
-      }
-    }
+      } catch (error) {
+        console.error('PDF-Export fehlgeschlagen:', error);
+        alert('Fehler beim PDF-Export: ' + error.message);
+      }
+    }
 
-    // Backup exportieren
-    function exportBackup() {
-      const data = {
-        entries: timeEntries,
-        settings: {
-          workHours: localStorage.getItem('workHours') || 8,
-          vacationDays: localStorage.getItem('vacationDays') || 24,
-          carryoverDays: localStorage.getItem('carryoverDays') || 0,
-          totalOvertimeMinutes: totalOvertimeMinutes
-        },
-        exported: new Date().toISOString()
-      };
-      const now = new Date().getTime();
-      backupTimestamps.push(now);
-      while (backupTimestamps.length > 2) backupTimestamps.shift();
-      localStorage.setItem('backupTimestamps', JSON.stringify(backupTimestamps));
-      download(`backup_zeiterfassung_${now}.json`, JSON.stringify(data, null, 2), 'application/json');
-    }
+    // Backup exportieren
+    function exportBackup() {
+      const data = {
+        entries: timeEntries,
+        settings: {
+          workHours: localStorage.getItem('workHours') || 8,
+          vacationDays: localStorage.getItem('vacationDays') || 24,
+          carryoverDays: localStorage.getItem('carryoverDays') || 0,
+          totalOvertimeMinutes: totalOvertimeMinutes
+        },
+        exported: new Date().toISOString()
+      };
+      const now = new Date().getTime();
+      backupTimestamps.push(now);
+      while (backupTimestamps.length > 2) backupTimestamps.shift();
+      localStorage.setItem('backupTimestamps', JSON.stringify(backupTimestamps));
+      download(`backup_zeiterfassung_${now}.json`, JSON.stringify(data, null, 2), 'application/json');
+    }
 
-    // Backup importieren
-    function handleImport(e) {
-      const file = e.target.files[0];
-      if (!file) return;
-      const reader = new FileReader();
-      reader.onload = async function (event) {
-        try {
-          const data = JSON.parse(event.target.result);
-          if (!Array.isArray(data.entries)) throw new Error('Ungültiges Format');
+    // Backup importieren
+    function handleImport(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = async function (event) {
+        try {
+          const data = JSON.parse(event.target.result);
+          if (!Array.isArray(data.entries)) throw new Error('Ungültiges Format');
 
-          if (confirm(`${data.entries.length} Einträge importieren? Vorherige Daten werden überschrieben.`)) {
-            if (db) {
-              // IndexedDB leeren
-              const transaction = db.transaction([STORE_NAME], 'readwrite');
-              const store = transaction.objectStore(STORE_NAME);
-              const clearRequest = store.clear();
+          if (confirm(`${data.entries.length} Einträge importieren? Vorherige Daten werden überschrieben.`)) {
+            if (db) {
+              // IndexedDB leeren
+              const transaction = db.transaction([STORE_NAME], 'readwrite');
+              const store = transaction.objectStore(STORE_NAME);
+              const clearRequest = store.clear();
 
-              clearRequest.onsuccess = async () => {
-                // Neue Einträge hinzufügen
-                for (const entry of data.entries) {
-                  await saveEntry(entry);
-                }
+              clearRequest.onsuccess = async () => {
+                // Neue Einträge hinzufügen
+                for (const entry of data.entries) {
+                  await saveEntry(entry);
+                }
 
-                // Einstellungen übernehmen
-                if (data.settings) {
-                  localStorage.setItem('workHours', data.settings.workHours);
-                  localStorage.setItem('vacationDays', data.settings.vacationDays);
-                  localStorage.setItem('carryoverDays', data.settings.carryoverDays);
-                  localStorage.setItem('totalOvertimeMinutes', data.settings.totalOvertimeMinutes);
-                  document.getElementById('work-hours').value = data.settings.workHours;
-                  document.getElementById('vacation-days-year').value = data.settings.vacationDays;
-                  document.getElementById('carryover-days').value = data.settings.carryoverDays;
-                  totalOvertimeMinutes = data.settings.totalOvertimeMinutes;
-                }
+                // Einstellungen übernehmen
+                if (data.settings) {
+                  localStorage.setItem('workHours', data.settings.workHours);
+                  localStorage.setItem('vacationDays', data.settings.vacationDays);
+                  localStorage.setItem('carryoverDays', data.settings.carryoverDays);
+                  localStorage.setItem('totalOvertimeMinutes', data.settings.totalOvertimeMinutes);
+                  document.getElementById('work-hours').value = data.settings.workHours;
+                  document.getElementById('vacation-days-year').value = data.settings.vacationDays;
+                  document.getElementById('carryover-days').value = data.settings.carryoverDays;
+                  totalOvertimeMinutes = data.settings.totalOvertimeMinutes;
+                }
 
-                loadEntries();
-                alert('Import erfolgreich.');
-              };
-            } else {
-              // Fallback zu localStorage
-              timeEntries = data.entries;
-              localStorage.setItem('timeEntries', JSON.stringify(timeEntries));
+                loadEntries();
+                alert('Import erfolgreich.');
+              };
+            } else {
+              // Fallback zu localStorage
+              timeEntries = data.entries;
+              localStorage.setItem('timeEntries', JSON.stringify(timeEntries));
 
-              if (data.settings) {
-                localStorage.setItem('workHours', data.settings.workHours);
-                localStorage.setItem('vacationDays', data.settings.vacationDays);
-                localStorage.setItem('carryoverDays', data.settings.carryoverDays);
-                localStorage.setItem('totalOvertimeMinutes', data.settings.totalOvertimeMinutes);
-                document.getElementById('work-hours').value = data.settings.workHours;
-                document.getElementById('vacation-days-year').value = data.settings.vacationDays;
-                document.getElementById('carryover-days').value = data.settings.carryoverDays;
-                totalOvertimeMinutes = data.settings.totalOvertimeMinutes;
-              }
+              if (data.settings) {
+                localStorage.setItem('workHours', data.settings.workHours);
+                localStorage.setItem('vacationDays', data.settings.vacationDays);
+                localStorage.setItem('carryoverDays', data.settings.carryoverDays);
+                localStorage.setItem('totalOvertimeMinutes', data.settings.totalOvertimeMinutes);
+                document.getElementById('work-hours').value = data.settings.workHours;
+                document.getElementById('vacation-days-year').value = data.settings.vacationDays;
+                document.getElementById('carryover-days').value = data.settings.carryoverDays;
+                totalOvertimeMinutes = data.settings.totalOvertimeMinutes;
+              }
 
-              loadEntries();
-              alert('Import erfolgreich.');
-            }
-          }
-        } catch (err) {
-          alert('Fehler beim Import: ' + err.message);
-        }
-      };
-      reader.readAsText(file);
-    }
+              loadEntries();
+              alert('Import erfolgreich.');
+            }
+          } catch (err) {
+          alert('Fehler beim Import: ' + err.message);
+        }
+      };
+      reader.readAsText(file);
+    }
 
-    // Hilfsfunktionen
-    function formatDate(dateStr) {
-      const [y, m, d] = dateStr.split('-');
-      return `${d}.${m}.${y}`;
-    }
+    // Überstunden zurücksetzen Funktion mit doppelter Warnung und Backup-Hinweis
+    function resetOvertime() {
+      if (confirm('Möchten Sie wirklich alle Überstunden zurücksetzen? Diese Aktion kann nicht rückgängig gemacht werden.')) {
+        if (confirm('Sind Sie sicher? Bitte erstellen Sie vorher ein Backup Ihrer Daten!')) {
+          localStorage.setItem('totalOvertimeMinutes', 0);
+          totalOvertimeMinutes = 0;
+          updateStats(totalOvertimeMinutes, timeEntries.filter(e => e.type === 'Urlaub').length, parseInt(localStorage.getItem('vacationDays') || 24) + parseInt(localStorage.getItem('carryoverDays') || 0), timeEntries.filter(e => e.type === 'Krank').length);
+          alert('Überstunden wurden zurückgesetzt.');
+        } else {
+          alert('Vorgang abgebrochen.');
+        }
+      } else {
+        alert('Vorgang abgebrochen.');
+      }
+    }
 
-    function isValidTime(time) {
-      return /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/.test(time);
-    }
+    // Hilfsfunktionen
+    function formatDate(dateStr) {
+      const [y, m, d] = dateStr.split('-');
+      return `${d}.${m}.${y}`;
+    }
 
-    function download(filename, content, type) {
-      const blob = new Blob(["\uFEFF" + content], { type });
-      const link = document.createElement('a');
-      link.href = URL.createObjectURL(blob);
-      link.download = filename;
-      link.click();
-      URL.revokeObjectURL(link.href);
-    }
+    function isValidTime(time) {
+      return /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/.test(time);
+    }
 
-    function checkBackupReminder() {
-      const last = backupTimestamps[backupTimestamps.length - 1] || 0;
-      const now = new Date().getTime();
-      const oneWeek = 7 * 24 * 60 * 60 * 1000;
-      if (now - last > oneWeek) {
-        alert("Es ist über eine Woche seit dem letzten Backup vergangen. Bitte speichern Sie ein neues Backup.");
-      }
-    }
-  </script>
+    function download(filename, content, type) {
+      const blob = new Blob(["\uFEFF" + content], { type });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = filename;
+      link.click();
+      URL.revokeObjectURL(link.href);
+    }
 
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
-  <script>
-    // Initialisierung für jsPDF
-    window.jspdf = window.jspdf || {};
-  </script>
+    function checkBackupReminder() {
+      const last = backupTimestamps[backupTimestamps.length - 1] || 0;
+      const now = new Date().getTime();
+      const oneWeek = 7 * 24 * 60 * 60 * 10
+      00;
+      if (now - last > oneWeek) {
+        alert("Es ist über eine Woche seit dem letzten Backup vergangen. Bitte speichern Sie ein neues Backup.");
+      }
+    }
+
+    // Event Listeners
+    document.getElementById('add-entry-btn').addEventListener('click', addTimeEntry);
+    document.getElementById('month').addEventListener('change', loadEntries);
+    workHoursInput.addEventListener('change', saveSettings);
+    vacationDaysYearInput.addEventListener('change', saveSettings);
+    carryoverDaysInput.addEventListener('change', saveSettings);
+    document.getElementById('export-csv-btn').addEventListener('click', exportCSV);
+    document.getElementById('export-pdf-btn').addEventListener('click', exportPDF);
+    document.getElementById('export-backup-btn').addEventListener('click', exportBackup);
+    document.getElementById('import-backup-btn').addEventListener('click', () => document.getElementById('import-file').click());
+    document.getElementById('import-file').addEventListener('change', handleImport);
+    document.getElementById('theme-toggle').addEventListener('click', toggleTheme);
+    document.getElementById('date').addEventListener('change', () => timeRangeDiv.style.display = 'none');
+    document.getElementById('type').addEventListener('change', (e) => {
+      if (e.target.value !== 'Arbeit') {
+        timeRangeDiv.style.display = 'block';
+      } else {
+        timeRangeDiv.style.display = 'none';
+      }
+    });
+    addTimeRangeBtn.addEventListener('click', addTimeRange);
+    resetOvertimeBtn.addEventListener('click', resetOvertime);
+  </script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+  <script>
+    // Initialisierung für jsPDF
+    window.jspdf = window.jspdf || {};
+  </script>
 </body>
 </html>
